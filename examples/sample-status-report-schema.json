@@ -1,0 +1,737 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schema for sample status report",
+  "type": "object",
+  "properties": {
+    "report_type": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "total_samples": {
+          "type": "number"
+        },
+        "completed": {
+          "type": "number"
+        },
+        "pending": {
+          "type": "number"
+        },
+        "partially_completed": {
+          "type": "number"
+        },
+        "failed": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "total_samples",
+        "completed",
+        "pending",
+        "partially_completed",
+        "failed"
+      ]
+    },
+    "samples_by_status": {
+      "type": "object",
+      "properties": {
+        "COMPLETED": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sample_id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "task_id": {
+                      "type": "string"
+                    },
+                    "process_name": {
+                      "type": "string"
+                    },
+                    "task_name": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "submit_time": {
+                      "type": "string"
+                    },
+                    "start_time": {
+                      "type": "string"
+                    },
+                    "complete_time": {
+                      "type": "string"
+                    },
+                    "duration_ms": {
+                      "type": "number"
+                    },
+                    "realtime_ms": {
+                      "type": "number"
+                    },
+                    "exit_status": {
+                      "type": "number"
+                    },
+                    "attempt": {
+                      "type": "number"
+                    },
+                    "rchar": {
+                      "type": "string"
+                    },
+                    "wchar": {
+                      "type": "string"
+                    },
+                    "pct_cpu": {
+                      "type": "number"
+                    },
+                    "peak_rss": {
+                      "type": "string"
+                    },
+                    "peak_vmem": {
+                      "type": "string"
+                    },
+                    "workdir": {
+                      "type": "string"
+                    },
+                    "log": {
+                      "type": "string"
+                    },
+                    "out": {
+                      "type": "string"
+                    },
+                    "err": {
+                      "type": "string"
+                    },
+                    "scratch": {
+                      "type": "string"
+                    },
+                    "container": {
+                      "type": "string"
+                    },
+                    "outputs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "task_id",
+                    "process_name",
+                    "task_name",
+                    "status",
+                    "submit_time",
+                    "start_time",
+                    "complete_time",
+                    "duration_ms",
+                    "realtime_ms",
+                    "exit_status",
+                    "attempt",
+                    "workdir",
+                    "log",
+                    "out",
+                    "err",
+                    "scratch",
+                    "container",
+                    "outputs"
+                  ]
+                }
+              },
+              "task_counts": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "number"
+                  },
+                  "completed": {
+                    "type": "number"
+                  },
+                  "cached": {
+                    "type": "number"
+                  },
+                  "failed": {
+                    "type": "number"
+                  },
+                  "aborted": {
+                    "type": "number"
+                  },
+                  "retried": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "total",
+                  "completed",
+                  "cached",
+                  "failed",
+                  "aborted",
+                  "retried"
+                ]
+              },
+              "first_task_start": {
+                "type": "string"
+              },
+              "last_task_complete": {
+                "type": "string"
+              },
+              "total_duration_ms": {
+                "type": "number"
+              },
+              "processes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "sample_id",
+              "status",
+              "tasks",
+              "task_counts",
+              "first_task_start",
+              "last_task_complete",
+              "total_duration_ms",
+              "processes"
+            ]
+          }
+        },
+        "PENDING": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sample_id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "task_id": {
+                      "type": "string"
+                    },
+                    "process_name": {
+                      "type": "string"
+                    },
+                    "task_name": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "submit_time": {
+                      "type": "string"
+                    },
+                    "start_time": {
+                      "type": "string"
+                    },
+                    "complete_time": {
+                      "type": "string"
+                    },
+                    "duration_ms": {
+                      "type": "number"
+                    },
+                    "realtime_ms": {
+                      "type": "number"
+                    },
+                    "exit_status": {
+                      "type": "number"
+                    },
+                    "attempt": {
+                      "type": "number"
+                    },
+                    "rchar": {
+                      "type": "string"
+                    },
+                    "wchar": {
+                      "type": "string"
+                    },
+                    "pct_cpu": {
+                      "type": "number"
+                    },
+                    "peak_rss": {
+                      "type": "string"
+                    },
+                    "peak_vmem": {
+                      "type": "string"
+                    },
+                    "workdir": {
+                      "type": "string"
+                    },
+                    "log": {
+                      "type": "string"
+                    },
+                    "out": {
+                      "type": "string"
+                    },
+                    "err": {
+                      "type": "string"
+                    },
+                    "scratch": {
+                      "type": "string"
+                    },
+                    "container": {
+                      "type": "string"
+                    },
+                    "outputs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "task_id",
+                    "process_name",
+                    "task_name",
+                    "status",
+                    "submit_time",
+                    "start_time",
+                    "complete_time",
+                    "duration_ms",
+                    "realtime_ms",
+                    "exit_status",
+                    "attempt",
+                    "workdir",
+                    "log",
+                    "out",
+                    "err",
+                    "scratch",
+                    "container",
+                    "outputs"
+                  ]
+                }
+              },
+              "task_counts": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "number"
+                  },
+                  "completed": {
+                    "type": "number"
+                  },
+                  "cached": {
+                    "type": "number"
+                  },
+                  "failed": {
+                    "type": "number"
+                  },
+                  "aborted": {
+                    "type": "number"
+                  },
+                  "retried": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "total",
+                  "completed",
+                  "cached",
+                  "failed",
+                  "aborted",
+                  "retried"
+                ]
+              },
+              "first_task_start": {
+                "type": "string"
+              },
+              "last_task_complete": {
+                "type": "string"
+              },
+              "total_duration_ms": {
+                "type": "number"
+              },
+              "processes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "sample_id",
+              "status",
+              "tasks",
+              "task_counts",
+              "first_task_start",
+              "last_task_complete",
+              "total_duration_ms",
+              "processes"
+            ]
+          }
+        },
+        "PARTIALLY_COMPLETED": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sample_id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "task_id": {
+                      "type": "string"
+                    },
+                    "process_name": {
+                      "type": "string"
+                    },
+                    "task_name": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "submit_time": {
+                      "type": "string"
+                    },
+                    "start_time": {
+                      "type": "string"
+                    },
+                    "complete_time": {
+                      "type": "string"
+                    },
+                    "duration_ms": {
+                      "type": "number"
+                    },
+                    "realtime_ms": {
+                      "type": "number"
+                    },
+                    "exit_status": {
+                      "type": "number"
+                    },
+                    "attempt": {
+                      "type": "number"
+                    },
+                    "rchar": {
+                      "type": "string"
+                    },
+                    "wchar": {
+                      "type": "string"
+                    },
+                    "pct_cpu": {
+                      "type": "number"
+                    },
+                    "peak_rss": {
+                      "type": "string"
+                    },
+                    "peak_vmem": {
+                      "type": "string"
+                    },
+                    "workdir": {
+                      "type": "string"
+                    },
+                    "log": {
+                      "type": "string"
+                    },
+                    "out": {
+                      "type": "string"
+                    },
+                    "err": {
+                      "type": "string"
+                    },
+                    "scratch": {
+                      "type": "string"
+                    },
+                    "container": {
+                      "type": "string"
+                    },
+                    "outputs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "task_id",
+                    "process_name",
+                    "task_name",
+                    "status",
+                    "submit_time",
+                    "start_time",
+                    "complete_time",
+                    "duration_ms",
+                    "realtime_ms",
+                    "exit_status",
+                    "attempt",
+                    "workdir",
+                    "log",
+                    "out",
+                    "err",
+                    "scratch",
+                    "container",
+                    "outputs"
+                  ]
+                }
+              },
+              "task_counts": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "number"
+                  },
+                  "completed": {
+                    "type": "number"
+                  },
+                  "cached": {
+                    "type": "number"
+                  },
+                  "failed": {
+                    "type": "number"
+                  },
+                  "aborted": {
+                    "type": "number"
+                  },
+                  "retried": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "total",
+                  "completed",
+                  "cached",
+                  "failed",
+                  "aborted",
+                  "retried"
+                ]
+              },
+              "first_task_start": {
+                "type": "string"
+              },
+              "last_task_complete": {
+                "type": "string"
+              },
+              "total_duration_ms": {
+                "type": "number"
+              },
+              "processes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "sample_id",
+              "status",
+              "tasks",
+              "task_counts",
+              "first_task_start",
+              "last_task_complete",
+              "total_duration_ms",
+              "processes"
+            ]
+          }
+        },
+        "FAILED": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sample_id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "task_id": {
+                      "type": "string"
+                    },
+                    "process_name": {
+                      "type": "string"
+                    },
+                    "task_name": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "submit_time": {
+                      "type": "string"
+                    },
+                    "start_time": {
+                      "type": "string"
+                    },
+                    "complete_time": {
+                      "type": "string"
+                    },
+                    "duration_ms": {
+                      "type": "number"
+                    },
+                    "realtime_ms": {
+                      "type": "number"
+                    },
+                    "exit_status": {
+                      "type": "number"
+                    },
+                    "attempt": {
+                      "type": "number"
+                    },
+                    "rchar": {
+                      "type": "string"
+                    },
+                    "wchar": {
+                      "type": "string"
+                    },
+                    "pct_cpu": {
+                      "type": "number"
+                    },
+                    "peak_rss": {
+                      "type": "string"
+                    },
+                    "peak_vmem": {
+                      "type": "string"
+                    },
+                    "workdir": {
+                      "type": "string"
+                    },
+                    "log": {
+                      "type": "string"
+                    },
+                    "out": {
+                      "type": "string"
+                    },
+                    "err": {
+                      "type": "string"
+                    },
+                    "scratch": {
+                      "type": "string"
+                    },
+                    "container": {
+                      "type": "string"
+                    },
+                    "outputs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "task_id",
+                    "process_name",
+                    "task_name",
+                    "status",
+                    "submit_time",
+                    "start_time",
+                    "complete_time",
+                    "duration_ms",
+                    "realtime_ms",
+                    "exit_status",
+                    "attempt",
+                    "workdir",
+                    "log",
+                    "out",
+                    "err",
+                    "scratch",
+                    "container",
+                    "outputs"
+                  ]
+                }
+              },
+              "task_counts": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "number"
+                  },
+                  "completed": {
+                    "type": "number"
+                  },
+                  "cached": {
+                    "type": "number"
+                  },
+                  "failed": {
+                    "type": "number"
+                  },
+                  "aborted": {
+                    "type": "number"
+                  },
+                  "retried": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "total",
+                  "completed",
+                  "cached",
+                  "failed",
+                  "aborted",
+                  "retried"
+                ]
+              },
+              "first_task_start": {
+                "type": "string"
+              },
+              "last_task_complete": {
+                "type": "string"
+              },
+              "total_duration_ms": {
+                "type": "number"
+              },
+              "processes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "sample_id",
+              "status",
+              "tasks",
+              "task_counts",
+              "first_task_start",
+              "last_task_complete",
+              "total_duration_ms",
+              "processes"
+            ]
+          }
+        }
+      },
+      "required": [
+        "COMPLETED",
+        "PENDING",
+        "PARTIALLY_COMPLETED",
+        "FAILED"
+      ]
+    }
+  },
+  "required": [
+    "report_type",
+    "generated_at",
+    "summary",
+    "samples_by_status"
+  ]
+}

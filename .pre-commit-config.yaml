@@ -1,0 +1,12 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+    -   id: check-added-large-files
+    -   id: end-of-file-fixer
+    -   id: trailing-whitespace
+-   repo: https://github.com/nvuillam/npm-groovy-lint
+    rev: v16.2.0
+    hooks:
+    -   id: format-npm-groovy-lint
+        files: \.(groovy|gradle)$

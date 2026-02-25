@@ -1,0 +1,183 @@
+nextflow_pipeline {
+
+    name "Test Workflow main.nf"
+    script "main.nf"
+
+    test("Only execution report") {
+        config "configs/execution_report_only.config"
+        then {
+            assert path("$launchDir/reports/execution-report.json").exists()
+        }
+    }
+    test("All reports with default config") {
+        config "configs/all_report_default.config"
+        then {
+            assert path("$launchDir/reports/execution-report.json").exists()
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            assert path("$launchDir/reports/task-status-report.json").exists()
+        }
+    }
+    test("All report in HTML format") {
+        config "configs/all_report_html.config"
+        then {
+            assert path("$launchDir/reports/execution-report.html").exists()
+            assert path("$launchDir/reports/sample-status-report.html").exists()
+            assert path("$launchDir/reports/task-status-report.html").exists()
+        }
+    }
+    test("All but task status report in HTML format") {
+        config "configs/all_report_html_with_override.config"
+        then {
+            assert path("$launchDir/reports/execution-report.html").exists()
+            assert path("$launchDir/reports/sample-status-report.html").exists()
+            assert !path("$launchDir/reports/task-status-report.html").exists()
+            assert path("$launchDir/reports/task-status-report.json").exists()
+        }
+    }
+    test("Custom output directory") {
+        config "configs/all_report_different_outdir.config"
+        then {
+            assert path("$launchDir/nfreports/execution-report.json").exists()
+            assert path("$launchDir/nfreports/sample-status-report.json").exists()
+            assert path("$launchDir/nfreports/task-status-report.json").exists()
+        }
+    }
+    test("Custom output file prefix") {
+        config "configs/all_report_prefix.config"
+        then {
+            assert path("$launchDir/reports/validation-execution-report.json").exists()
+            assert path("$launchDir/reports/validation-sample-status-report.json").exists()
+            assert path("$launchDir/reports/validation-task-status-report.json").exists()
+        }
+    }
+    test("Custom output file suffix") {
+        config "configs/all_report_suffix.config"
+        then {
+            assert path("$launchDir/reports/execution-report-test.json").exists()
+            assert path("$launchDir/reports/sample-status-report-test.json").exists()
+            assert path("$launchDir/reports/task-status-report-test.json").exists()
+        }
+    }
+    test("Generate report for workflow where all processes fail") {
+        config "configs/all_report_default.config"
+        when {
+            params.run_processes_always_fail = true
+        }
+        then {
+            assert path("$launchDir/reports/execution-report.json").exists()
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            assert path("$launchDir/reports/task-status-report.json").exists()
+            def taskStatusReport = path("$launchDir/reports/task-status-report.json").json
+            assert taskStatusReport.summary.total_tasks == 6
+            assert taskStatusReport.summary.failed == 6
+            def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
+            assert sampleStatusReport.summary.total_samples == 3
+            assert sampleStatusReport.summary.failed == 3
+            assert sampleStatusReport.samples_by_status.COMPLETED == []
+            def failedSamples = sampleStatusReport.samples_by_status.FAILED.collect { sample -> sample.sample_id }
+            assert failedSamples.containsAll(['sample1', 'sample2', 'sample3'])
+        }
+    }
+
+    test("Generate report for workflow where some processes fail") {
+        config "configs/all_report_default.config"
+        when {
+            // Run processes that always fail to simulate errors
+            params.run_processes_always_fail = true
+            // Run processes that always succeed
+            params.run_processes_always_succeed = true
+        }
+        then {
+            assert path("$launchDir/reports/execution-report.json").exists()
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            assert path("$launchDir/reports/task-status-report.json").exists()
+            def taskStatusReport = path("$launchDir/reports/task-status-report.json").json
+            assert taskStatusReport.summary.total_tasks == 12
+            assert taskStatusReport.summary.failed == 6
+            assert taskStatusReport.summary.completed == 6
+            def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
+            assert sampleStatusReport.summary.total_samples == 3
+            assert sampleStatusReport.summary.partially_completed == 3
+            assert sampleStatusReport.samples_by_status.COMPLETED == []
+            def partiallyCompletedSamples = sampleStatusReport.samples_by_status.PARTIALLY_COMPLETED.collect { sample -> sample.sample_id }
+            assert partiallyCompletedSamples.containsAll(['sample1', 'sample2', 'sample3'])
+        }
+    }
+
+    test("Generate report for workflow where some processes succeed upon retry") {
+        config "configs/all_report_default.config"
+        when {
+            // Run processes that always succeed
+            params.run_processes_always_succeed = true
+            // Run processes that always succeed upon retry to simulate transient errors
+            params.run_processes_always_succeed_upon_retry = true
+        }
+        then {
+            assert path("$launchDir/reports/execution-report.json").exists()
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            assert path("$launchDir/reports/task-status-report.json").exists()
+            def taskStatusReport = path("$launchDir/reports/task-status-report.json").json
+            assert taskStatusReport.summary.total_tasks == 18
+            assert taskStatusReport.summary.retried == 6
+            assert taskStatusReport.summary.completed == 12
+            def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
+            assert sampleStatusReport.summary.total_samples == 3
+            assert sampleStatusReport.summary.completed == 3
+            assert sampleStatusReport.samples_by_status.PARTIALLY_COMPLETED == []
+            def completedSamples = sampleStatusReport.samples_by_status.COMPLETED.collect { sample -> sample.sample_id }
+            assert completedSamples.containsAll(['sample1', 'sample2', 'sample3'])
+        }
+    }
+
+    test("Generate report for workflow where some samples fail") {
+        config "configs/all_report_default.config"
+        when {
+            // Run processes that always fail to simulate errors
+            params.run_processes_always_fail = true
+            // Run processes that always succeed
+            params.run_processes_always_succeed = true
+            // Add samples that never fail to simulate a mixed success/failure scenario
+            params.include_samples_that_never_fail = true
+        }
+        then {
+            assert path("$launchDir/reports/execution-report.json").exists()
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            assert path("$launchDir/reports/task-status-report.json").exists()
+            def taskStatusReport = path("$launchDir/reports/task-status-report.json").json
+            assert taskStatusReport.summary.total_tasks == 20
+            assert taskStatusReport.summary.failed == 6
+            assert taskStatusReport.summary.completed == 14
+            def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
+            assert sampleStatusReport.summary.total_samples == 5
+            assert sampleStatusReport.summary.partially_completed == 3
+            assert sampleStatusReport.summary.completed == 2
+            def partiallyCompletedSamples = sampleStatusReport.samples_by_status.PARTIALLY_COMPLETED.collect { sample -> sample.sample_id }
+            def completedSamples = sampleStatusReport.samples_by_status.COMPLETED.collect { sample -> sample.sample_id }
+            assert partiallyCompletedSamples.containsAll(['sample1', 'sample2', 'sample3'])
+            assert completedSamples.containsAll(['sample4', 'sample5'])
+        }
+    }
+
+    test("Sample names can be extracted from meta map") {
+        config "configs/extract_sample_name_from_meta.config"
+        when {
+            // Run processes that always fail to simulate errors
+            params.run_processes_always_fail = true
+            // Run processes that always succeed
+            params.run_processes_always_succeed = true
+            // Add samples that never fail to simulate a mixed success/failure scenario
+            params.include_samples_that_never_fail = true
+        }
+        then {
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
+            assert sampleStatusReport.summary.total_samples == 5
+            assert sampleStatusReport.summary.partially_completed == 3
+            assert sampleStatusReport.summary.completed == 2
+            def partiallyCompletedSamples = sampleStatusReport.samples_by_status.PARTIALLY_COMPLETED.collect { sample -> sample.sample_id }
+            def completedSamples = sampleStatusReport.samples_by_status.COMPLETED.collect { sample -> sample.sample_id }
+            assert partiallyCompletedSamples.containsAll(['sample1', 'sample2', 'sample3'])
+            assert completedSamples.containsAll(['sample4', 'sample5'])
+        }
+    }
+}

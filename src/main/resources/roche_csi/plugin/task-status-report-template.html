@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Status Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #000000;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .COMPLETED {
+            background-color: #d4edda;
+        }
+        .CACHED {
+            background-color: #d4edda;
+        }
+        .FAILED {
+            background-color: #f8d7da;
+        }
+        .RETRIED {
+            background-color: #fff3cd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Status Report</h1>
+    <p>Report Type: ${report_type}</p>
+    <p>Generated At: ${generated_at}</p>
+
+    <h2>Summary</h2>
+    <ul>
+        <li>Total Tasks: ${summary.total_tasks}</li>
+        <li>Completed: ${summary.completed}</li>
+        <li>Cached: ${summary.cached}</li>
+        <li>Failed: ${summary.failed}</li>
+    </ul>
+
+    <h2>Tasks by Status</h2>
+    <% tasks_by_status.each { status, tasks -> %>
+        <h3>${status}</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Task ID</th>
+                    <th>Status</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% tasks.each { task -> %>
+                <tr class="${status}">
+                    <td>${task.task_id}</td>
+                    <td>${task.status}</td>
+                    <td>
+                        <ul>
+                            <% task.each { key, value -> %>
+                            <li><strong>${key}:</strong>
+                                <% if (value instanceof List) { %>
+                                    <table>
+                                        <% value.each { item -> %>
+                                        <tr>
+                                            <td>${item}</td>
+                                        </tr>
+                                        <% } %>
+                                    </table>
+                                <% } else if (value instanceof Map) { %>
+                                    <table>
+                                        <% value.each { mapKey, mapValue -> %>
+                                        <tr>
+                                            <td><strong>${mapKey}:</strong></td>
+                                            <td>${mapValue}</td>
+                                        </tr>
+                                        <% } %>
+                                    </table>
+                                <% } else { %>
+                                    ${value}
+                                <% } %>
+                            </li>
+                            <% } %>
+                        </ul>
+                    </td>
+                </tr>
+                <% } %>
+            </tbody>
+        </table>
+    <% } %>
+</body>
+</html>

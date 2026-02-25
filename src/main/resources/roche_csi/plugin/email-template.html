@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #000000;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .COMPLETED {
+            background-color: #d4edda;
+        }
+        .PENDING {
+            background-color: #d1ecf1;
+        }
+        .PARTIALLY_COMPLETED {
+            background-color: #fff3cd;
+        }
+        .FAILED {
+            background-color: #f8d7da;
+        }
+        .CACHED {
+            background-color: #d4edda;
+        }
+        .RETRIED {
+            background-color: #fff3cd;
+        }
+    </style>
+</head>
+<body>
+    <% if (!hasVariable('execution_report') && !hasVariable('sample_status_report') && !hasVariable('task_status_report')) { %>
+    <h1>No Reports Available</h1>
+    <p>The workflow has completed but no report was generated. Please enable reports in your Nextflow configuration.</p>
+    <% } %>
+    <% if (hasVariable('execution_report')) { %>
+    <h1>Execution Report</h1>
+    <p>Report Type: ${execution_report.report_type}</p>
+    <p>Generated At: ${execution_report.generated_at}</p>
+
+    <h2>Events</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Event Type</th>
+                <th>Timestamp</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% execution_report.events.each { event -> %>
+            <tr>
+                <td>${event.event_type}</td>
+                <td>${event.timestamp}</td>
+                <td>
+                    <ul>
+                        <% event.each { key, value -> %>
+                        <li><strong>${key}:</strong> ${value}</li>
+                        <% } %>
+                    </ul>
+                </td>
+            </tr>
+            <% } %>
+        </tbody>
+    </table>
+
+    <h1>Sample Status Report</h1>
+    <p>Report Type: ${sample_status_report.report_type}</p>
+    <p>Generated At: ${sample_status_report.generated_at}</p>
+
+    <h2>Summary</h2>
+    <ul>
+        <li>Total Samples: ${sample_status_report.summary.total_samples}</li>
+        <li>Completed: ${sample_status_report.summary.completed}</li>
+        <li>Pending: ${sample_status_report.summary.pending}</li>
+        <li>Partially Completed: ${sample_status_report.summary.partially_completed}</li>
+        <li>Failed: ${sample_status_report.summary.failed}</li>
+    </ul>
+    <% } %>
+
+    <% if (hasVariable('sample_status_report')) { %>
+    <h2>Samples by Status</h2>
+    <% sample_status_report.samples_by_status.each { status, samples -> %>
+        <h3>${status}</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Sample ID</th>
+                    <th>Status</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% samples.each { sample -> %>
+                <tr class="${status}">
+                    <td>${sample.sample_id}</td>
+                    <td>${sample.status}</td>
+                    <td>
+                        <ul>
+                            <% sample.each { key, value -> %>
+                            <li><strong>${key}:</strong>
+                                <% if (value instanceof List) { %>
+                                    <table>
+                                        <% value.each { item -> %>
+                                            <% if (item instanceof Map) { %>
+                                                <tr>
+                                                  <td>
+                                                    <table>
+                                                      <% item.each { itemKey, itemValue -> %>
+                                                      <tr><td><strong>${itemKey}:</strong></td><td>${itemValue}</td></tr>
+                                                      <% } %>
+                                                    </table>
+                                                  </td>
+                                                </tr>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td>${item}</td>
+                                                </tr>
+                                            <% } %>
+                                        <% } %>
+                                    </table>
+                                <% } else if (value instanceof Map) { %>
+                                    <table>
+                                        <% value.each { mapKey, mapValue -> %>
+                                        <tr>
+                                            <td><strong>${mapKey}:</strong></td>
+                                            <td>${mapValue}</td>
+                                        </tr>
+                                        <% } %>
+                                    </table>
+                                <% } else { %>
+                                    ${value}
+                                <% } %>
+                            </li>
+                            <% } %>
+                        </ul>
+                    </td>
+                </tr>
+                <% } %>
+            </tbody>
+        </table>
+    <% } %>
+    <% } %>
+
+    <% if (hasVariable('task_status_report')) { %>
+    <h1>Task Status Report</h1>
+    <p>Report Type: ${task_status_report.report_type}</p>
+    <p>Generated At: ${task_status_report.generated_at}</p>
+
+    <h2>Summary</h2>
+    <ul>
+        <li>Total Tasks: ${task_status_report.summary.total_tasks}</li>
+        <li>Completed: ${task_status_report.summary.completed}</li>
+        <li>Cached: ${task_status_report.summary.cached}</li>
+        <li>Failed: ${task_status_report.summary.failed}</li>
+    </ul>
+
+    <h2>Tasks by Status</h2>
+    <% task_status_report.tasks_by_status.each { status, tasks -> %>
+        <h3>${status}</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Task ID</th>
+                    <th>Status</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% tasks.each { task -> %>
+                <tr class="${status}">
+                    <td>${task.task_id}</td>
+                    <td>${task.status}</td>
+                    <td>
+                        <ul>
+                            <% task.each { key, value -> %>
+                            <li><strong>${key}:</strong>
+                                <% if (value instanceof List) { %>
+                                    <table>
+                                        <% value.each { item -> %>
+                                        <tr>
+                                            <td>${item}</td>
+                                        </tr>
+                                        <% } %>
+                                    </table>
+                                <% } else if (value instanceof Map) { %>
+                                    <table>
+                                        <% value.each { mapKey, mapValue -> %>
+                                        <tr>
+                                            <td><strong>${mapKey}:</strong></td>
+                                            <td>${mapValue}</td>
+                                        </tr>
+                                        <% } %>
+                                    </table>
+                                <% } else { %>
+                                    ${value}
+                                <% } %>
+                            </li>
+                            <% } %>
+                        </ul>
+                    </td>
+                </tr>
+                <% } %>
+            </tbody>
+        </table>
+    <% } %>
+    <% } %>
+</body>
+</html>

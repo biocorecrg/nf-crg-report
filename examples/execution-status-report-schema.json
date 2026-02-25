@@ -1,0 +1,191 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Schema for execution report",
+  "type": "object",
+  "properties": {
+    "report_type": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event_type": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "run_name": {
+            "type": "string"
+          },
+          "script_id": {
+            "type": "string"
+          },
+          "script_name": {
+            "type": "string"
+          },
+          "command_line": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "properties": {},
+            "required": []
+          },
+          "repository": {
+            "type": "string"
+          },
+          "commit_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "nextflow_version": {
+            "type": "object",
+            "properties": {
+              "major": {
+                "type": "string"
+              },
+              "minor": {
+                "type": "string"
+              },
+              "patch": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "major",
+              "minor",
+              "patch"
+            ]
+          },
+          "project_dir": {
+            "type": "string"
+          },
+          "launch_dir": {
+            "type": "string"
+          },
+          "output_dir": {
+            "type": "string"
+          },
+          "work_dir": {
+            "type": "string"
+          },
+          "home_dir": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "container_engine": {
+            "type": "string"
+          },
+          "config_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "end_time": {
+            "type": "string"
+          },
+          "duration": {
+            "type": "object",
+            "properties": {
+              "durationInMillis": {
+                "type": "number"
+              },
+              "days": {
+                "type": "number"
+              },
+              "hours": {
+                "type": "number"
+              },
+              "millis": {
+                "type": "number"
+              },
+              "minutes": {
+                "type": "number"
+              },
+              "seconds": {
+                "type": "number"
+              },
+              "units": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "durationInMillis",
+              "days",
+              "hours",
+              "millis",
+              "minutes",
+              "seconds",
+              "units"
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "exit_status": {
+            "type": "number"
+          },
+          "error_message": {
+            "type": "string"
+          },
+          "error_report": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_type",
+          "timestamp",
+          "run_name",
+          "script_id",
+          "script_name",
+          "command_line",
+          "params",
+          "repository",
+          "commit_id",
+          "revision",
+          "start_time",
+          "nextflow_version",
+          "project_dir",
+          "launch_dir",
+          "output_dir",
+          "work_dir",
+          "home_dir",
+          "user_name",
+          "profile",
+          "session_id",
+          "container_engine",
+          "config_files",
+          "error_message"
+        ]
+      }
+    }
+  },
+  "required": [
+    "report_type",
+    "generated_at",
+    "events"
+  ]
+}

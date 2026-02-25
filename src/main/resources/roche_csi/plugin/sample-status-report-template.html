@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Status Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #000000;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .COMPLETED {
+            background-color: #d4edda;
+        }
+        .PENDING {
+            background-color: #d1ecf1;
+        }
+        .PARTIALLY_COMPLETED {
+            background-color: #fff3cd;
+        }
+        .FAILED {
+            background-color: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sample Status Report</h1>
+    <p>Report Type: ${report_type}</p>
+    <p>Generated At: ${generated_at}</p>
+
+    <h2>Summary</h2>
+    <ul>
+        <li>Total Samples: ${summary.total_samples}</li>
+        <li>Completed: ${summary.completed}</li>
+        <li>Pending: ${summary.pending}</li>
+        <li>Partially Completed: ${summary.partially_completed}</li>
+        <li>Failed: ${summary.failed}</li>
+    </ul>
+
+    <h2>Samples by Status</h2>
+    <% samples_by_status.each { status, samples -> %>
+        <h3>${status}</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Sample ID</th>
+                    <th>Status</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% samples.each { sample -> %>
+                <tr class="${status}">
+                    <td>${sample.sample_id}</td>
+                    <td>${sample.status}</td>
+                    <td>
+                        <ul>
+                            <% sample.each { key, value -> %>
+                            <li><strong>${key}:</strong>
+                                <% if (value instanceof List) { %>
+                                    <table>
+                                        <% value.each { item -> %>
+                                            <% if (item instanceof Map) { %>
+                                                <tr>
+                                                  <td>
+                                                    <table>
+                                                      <% item.each { itemKey, itemValue -> %>
+                                                      <tr><td><strong>${itemKey}:</strong></td><td>${itemValue}</td></tr>
+                                                      <% } %>
+                                                    </table>
+                                                  </td>
+                                                </tr>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td>${item}</td>
+                                                </tr>
+                                            <% } %>
+                                        <% } %>
+                                    </table>
+                                <% } else if (value instanceof Map) { %>
+                                    <table>
+                                        <% value.each { mapKey, mapValue -> %>
+                                        <tr>
+                                            <td><strong>${mapKey}:</strong></td>
+                                            <td>${mapValue}</td>
+                                        </tr>
+                                        <% } %>
+                                    </table>
+                                <% } else { %>
+                                    ${value}
+                                <% } %>
+                            </li>
+                            <% } %>
+                        </ul>
+                    </td>
+                </tr>
+                <% } %>
+            </tbody>
+        </table>
+    <% } %>
+</body>
+</html>
