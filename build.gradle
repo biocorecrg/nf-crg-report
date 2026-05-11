@@ -17,7 +17,7 @@ dependencies {
 nextflowPlugin {
     nextflowVersion = '25.10.0'
 
-    provider = 'roche_csi'
+    provider = 'Roche'
     className = 'roche_csi.plugin.NfReportPlugin'
     extensionPoints = [
         'roche_csi.plugin.config.NfReportConfig',
