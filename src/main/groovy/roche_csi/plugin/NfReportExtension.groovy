@@ -5,27 +5,23 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.plugin.extension.Function
 import nextflow.plugin.extension.PluginExtensionPoint
+import roche_csi.plugin.config.NfReportConfig
 
-/**
- * Implements custom functions for the nf-report plugin
- */
 @Slf4j
 @CompileStatic
 class NfReportExtension extends PluginExtensionPoint {
 
     private Session session
+    private NfReportConfig pluginConfig
 
     @Override
     protected void init(Session session) {
         this.session = session
+        def configMap = session.config.navigate('nfreport') as Map ?: [:]
+        this.pluginConfig = new NfReportConfig(configMap)
         log.debug('nf-report extension initialized')
     }
 
-    /**
-     * Get the current configuration for the nf-report plugin
-     *
-     * @return Map containing the plugin configuration
-     */
     @Function
     Map getReportConfig() {
         def config = session.config.navigate('nfreport') as Map ?: [:]
@@ -33,40 +29,30 @@ class NfReportExtension extends PluginExtensionPoint {
         return config
     }
 
-    /**
-     * Check if a specific report type is enabled
-     *
-     * @param reportType The type of report to check (execution, taskStatus, sampleStatus)
-     * @return boolean indicating if the report is enabled
-     */
     @Function
     boolean isReportEnabled(String reportType) {
-        def config = session.config.navigate('nfreport') as Map ?: [:]
-
-        // Check global enabled flag first
-        if (config.enabled == false) {
+        if (!pluginConfig.enabled) {
             return false
         }
 
-        // Check specific report configuration
-        def reportConfig = config[reportType] as Map ?: [:]
-        boolean enabled = reportConfig.enabled != false
-
-        log.debug("Report ${reportType} enabled: ${enabled}")
-        return enabled
+        switch (reportType) {
+            case 'executionReport':
+                return pluginConfig.executionReport.enabled
+            case 'taskStatusReport':
+                return pluginConfig.taskStatusReport.enabled
+            case 'sampleStatusReport':
+                return pluginConfig.sampleStatusReport.enabled
+            default:
+                log.debug("Unknown report type: ${reportType}")
+                return false
+        }
     }
 
-    /**
-     * Get the output directory for reports
-     *
-     * @return String path to the reports output directory
-     */
     @Function
     String getReportsDir() {
-        def config = session.config.navigate('nfreport') as Map ?: [:]
-        def outputDir = config.outputDir ?: './reports'
+        def outputDir = pluginConfig.outputDir
         log.debug("Reports directory: ${outputDir}")
-        return outputDir.toString()
+        return outputDir
     }
 
 }

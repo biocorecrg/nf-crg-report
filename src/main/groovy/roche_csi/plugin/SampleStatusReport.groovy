@@ -116,11 +116,11 @@ class SampleStatusReport extends BaseReport {
                     // We have a Map, now check if it has a key matching the user-defined pattern
                     for (item in param.value) {
                         if (sampleNameMetaKeyPattern != null) {
-                            log.info "Checking meta_map key: ${item.key} with value: ${item.value}, against pattern: ${sampleNameMetaKeyPattern}"
+                            log.debug "Checking meta_map key: ${item.key} with value: ${item.value}, against pattern: ${sampleNameMetaKeyPattern}"
                             def pattern = ~sampleNameMetaKeyPattern
                             def matcher = item.key.toString() =~ pattern
                             if (matcher.find()) {
-                                log.info "Found key: ${item.key}, returning value: ${item.value}"
+                                log.debug "Found key: ${item.key}, returning value: ${item.value}"
                                 return item.value.toString()
                             }
                         } else {
