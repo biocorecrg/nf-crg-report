@@ -107,7 +107,7 @@ The following configuration demonstrates how to set these options: this configur
 
 ```groovy
 nfreport {
-    sampleStatus {
+    sampleStatusReport {
         enabled = true
         extractSampleNameFrom = 'meta_map'  // Options: 'tag' (default) or 'meta_map'
         sampleNameMetaKeyPattern = 'sample_id' // Pattern for extracting from metadata maps (will match meta maps like [sample_id: 'sample-01', ...])
