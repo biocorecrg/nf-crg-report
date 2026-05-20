@@ -102,6 +102,21 @@ process TEST_PROCESS_SUCCEED_UPON_RETRY_2 {
     """
 }
 
+process TEST_PROCESS_MULTI_SAMPLE {
+    tag "${meta.sample_name}"
+
+    input:
+    tuple val(meta), val(dummy)
+
+    output:
+    path "test_process_multi_sample_output.txt"
+
+    script:
+    """
+    echo "Running TEST_PROCESS_MULTI_SAMPLE with sample_name: ${meta.sample_name}" > test_process_multi_sample_output.txt
+    """
+}
+
 workflow {
     samples = channel.of(
         'sample1',
@@ -126,5 +141,15 @@ workflow {
     if (params.run_processes_always_succeed_upon_retry) {
         TEST_PROCESS_SUCCEED_UPON_RETRY_1(samples)
         TEST_PROCESS_SUCCEED_UPON_RETRY_2(samples)
+    }
+    if (params.run_processes_multi_sample) {
+        // Each task is attributed to multiple samples via a Collection tag
+        multi_samples = channel.of(
+            [['sample1', 'sample2'], 1],
+            [['sample3'], 1]
+        ).map { sample_names, dummy ->
+            [[sample_name: sample_names, no_fail: false], dummy]
+        }
+        TEST_PROCESS_MULTI_SAMPLE(multi_samples)
     }
 }

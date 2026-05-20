@@ -27,6 +27,7 @@ class SampleStatusReport extends BaseReport {
     private String sampleNameTagPattern = null
     private String sampleNameMetaKeyPattern = null
     private String extractSampleNameFrom = 'tag' // or "meta_map"
+    private boolean printCompletionSummary = false
 
     SampleStatusReport() {
         super('sample-status-report')
@@ -38,6 +39,7 @@ class SampleStatusReport extends BaseReport {
         extractSampleNameFrom = config.extractSampleNameFrom ?: 'tag'
         sampleNameTagPattern = config.sampleNameTagPattern ?: null
         sampleNameMetaKeyPattern = config.sampleNameMetaKeyPattern ?: null
+        printCompletionSummary = config.printCompletionSummary ?: false
     }
 
     @Override
@@ -47,13 +49,17 @@ class SampleStatusReport extends BaseReport {
             return
         }
 
-        def sampleId = extractSampleId(handler, trace)
-        if (sampleId) {
+        def sampleIds = extractSampleIds(handler, trace)
+        if (sampleIds) {
             def status = trace.get('status')?.toString() ?: 'COMPLETED'
             if (trace.get('error_action') == 'RETRY') {
                 status = 'RETRIED'
+            } else if (trace.get('error_action') == 'IGNORE') {
+                status = 'IGNORED'
             }
-            updateSampleData(sampleId, handler, trace, status)
+            sampleIds.each { sampleId ->
+                updateSampleData(sampleId, handler, trace, status)
+            }
         }
         writeReport()
     }
@@ -65,8 +71,8 @@ class SampleStatusReport extends BaseReport {
             return
         }
 
-        def sampleId = extractSampleId(handler, trace)
-        if (sampleId) {
+        def sampleIds = extractSampleIds(handler, trace)
+        sampleIds.each { sampleId ->
             updateSampleData(sampleId, handler, trace, 'CACHED')
         }
 
@@ -81,6 +87,68 @@ class SampleStatusReport extends BaseReport {
         }
 
         writeReport()
+
+        if (printCompletionSummary) {
+            printSummary()
+        }
+    }
+
+    private void printSummary() {
+        def summary = buildCompletionSummary()
+        def hasFailures = sampleData.values().any { it?.status in ['FAILED', 'PARTIALLY_COMPLETED'] }
+        if (hasFailures) {
+            log.warn(summary)
+        } else {
+            log.info(summary)
+        }
+    }
+
+    String buildCompletionSummary() {
+        def samplesByStatus = [
+            'COMPLETED': [],
+            'PARTIALLY_COMPLETED': [],
+            'FAILED': [],
+            'PENDING': []
+        ]
+        synchronized(sampleData) {
+            sampleData.each { sampleId, sample ->
+                if (sample?.status && samplesByStatus.containsKey(sample.status)) {
+                    samplesByStatus[sample.status] << sampleId
+                }
+            }
+        }
+
+        def sb = new StringBuilder()
+        sb << '\n=== Sample Status Summary ===\n'
+
+        if (samplesByStatus['COMPLETED']) {
+            sb << "\nCompleted (${samplesByStatus['COMPLETED'].size()}):\n"
+            samplesByStatus['COMPLETED'].sort().each { sb << "  - ${it}\n" }
+        }
+
+        if (samplesByStatus['PARTIALLY_COMPLETED']) {
+            sb << "\nPartially Completed (${samplesByStatus['PARTIALLY_COMPLETED'].size()}):\n"
+            samplesByStatus['PARTIALLY_COMPLETED'].sort().each { sb << "  - ${it}\n" }
+        }
+
+        if (samplesByStatus['FAILED']) {
+            sb << "\nFailed (${samplesByStatus['FAILED'].size()}):\n"
+            samplesByStatus['FAILED'].sort().each { sb << "  - ${it}\n" }
+        }
+
+        if (samplesByStatus['PENDING']) {
+            sb << "\nPending (${samplesByStatus['PENDING'].size()}):\n"
+            samplesByStatus['PENDING'].sort().each { sb << "  - ${it}\n" }
+        }
+
+        // Include normalized paths to generated report files
+        def reportPaths = outputFiles.values().collect { it.toPath().toAbsolutePath().normalize().toString() }
+        if (reportPaths) {
+            sb << "\nReport: ${reportPaths.join(', ')}\n"
+        }
+
+        sb << '============================='
+        return sb.toString()
     }
 
     private static <T extends InParam> Map<T,Object> getInputsByType(TaskRun task, Class<T>... types) {
@@ -93,27 +161,24 @@ class SampleStatusReport extends BaseReport {
         return result
     }
 
-    private String extractSampleId(TaskHandler handler, TraceRecord trace) {
+    private List<String> extractSampleIds(TaskHandler handler, TraceRecord trace) {
         if (extractSampleNameFrom == 'tag') {
             def tag = handler.task.config.tag
             if (tag && tag != 'null' && tag.toString().trim()) {
                 def tagStr = tag.toString()
                 if (sampleNameTagPattern != null) {
-                    // If there is a user-defined pattern, use it to extract sample ID
                     def pattern = ~sampleNameTagPattern
                     def matcher = tagStr =~ pattern
                     if (matcher.find()) {
-                        return matcher.group()
+                        return [matcher.group()]
                     }
                 }
-                return tagStr
+                return [tagStr]
             }
         } else if (extractSampleNameFrom == 'meta_map') {
             def params = getInputsByType(handler.task as TaskRun, ValueInParam)
             for (param in params) {
-                // Go through each ValueInParam and check if it contains a Map
                 if (param.value instanceof Map) {
-                    // We have a Map, now check if it has a key matching the user-defined pattern
                     for (item in param.value) {
                         if (sampleNameMetaKeyPattern != null) {
                             log.debug "Checking meta_map key: ${item.key} with value: ${item.value}, against pattern: ${sampleNameMetaKeyPattern}"
@@ -121,17 +186,24 @@ class SampleStatusReport extends BaseReport {
                             def matcher = item.key.toString() =~ pattern
                             if (matcher.find()) {
                                 log.debug "Found key: ${item.key}, returning value: ${item.value}"
-                                return item.value.toString()
+                                return toSampleIdList(item.value)
                             }
                         } else {
-                            // If no pattern is defined, just return the first value
-                            return item.value.toString()
+                            return toSampleIdList(item.value)
                         }
                     }
                 }
             }
         }
-        return null
+        return []
+    }
+
+    private static List<String> toSampleIdList(Object value) {
+        if (value instanceof Collection) {
+            return value.collect { it.toString() }.findAll { it.trim() }
+        }
+        def str = value.toString().trim()
+        return str ? [str] : []
     }
 
     List<String> getOutputs(TaskHandler handler) {
@@ -162,7 +234,8 @@ class SampleStatusReport extends BaseReport {
                         cached: 0,
                         failed: 0,
                         aborted: 0,
-                        retried: 0
+                        failure_retried: 0,
+                        failure_ignored: 0,
                     ],
                     first_task_start: null,
                     last_task_complete: null,
@@ -229,7 +302,10 @@ class SampleStatusReport extends BaseReport {
                     sample.task_counts.aborted++
                     break
                 case 'RETRIED':
-                    sample.task_counts.retried++
+                    sample.task_counts.failure_retried++
+                    break
+                case 'IGNORED':
+                    sample.task_counts.failure_ignored++
                     break
             }
 
@@ -277,7 +353,7 @@ class SampleStatusReport extends BaseReport {
             }
 
             // Update overall sample status
-            if (sample.task_counts.failed + sample.task_counts.aborted > 0) {
+            if (sample.task_counts.failed + sample.task_counts.aborted + sample.task_counts.failure_ignored > 0) {
                 if (sample.task_counts.completed + sample.task_counts.cached > 0) {
                     sample.status = 'PARTIALLY_COMPLETED'
                 } else {
@@ -290,7 +366,7 @@ class SampleStatusReport extends BaseReport {
             }
 
             // For retried tasks, if there are any subsequent attempts that completed successfully, update status accordingly
-            if (sample.task_counts.retried > 0) {
+            if (sample.task_counts.failure_retried > 0) {
                 def allRetriesCompleted = true
                 // Iterate through tasks to check if all retried tasks eventually completed
                 sample.tasks.each { task ->
@@ -302,7 +378,7 @@ class SampleStatusReport extends BaseReport {
                     }
                 }
                 if (allRetriesCompleted) {
-                    if (sample.task_counts.failed + sample.task_counts.aborted > 0) {
+                    if (sample.task_counts.failed + sample.task_counts.aborted + sample.task_counts.failure_ignored > 0) {
                         sample.status = 'PARTIALLY_COMPLETED'
                     } else {
                         sample.status = 'COMPLETED'
@@ -370,10 +446,10 @@ class SampleStatusReport extends BaseReport {
 
     private void writeTsvReport() {
         def tsvContent = new StringBuilder()
-        tsvContent << 'sample_id\tstatus\ttotal_tasks\tcompleted_tasks\tcached_tasks\tfailed_tasks\taborted_tasks\tretried_tasks\n'
+        tsvContent << 'sample_id\tstatus\ttotal_tasks\tcompleted_tasks\tcached_tasks\tfailed_tasks\taborted_tasks\tretried_failures\tignored_failures\n'
         synchronized(sampleData) {
             sampleData.each { sampleId, sample ->
-                tsvContent << "${sampleId}\t${sample.status}\t${sample.task_counts.total}\t${sample.task_counts.completed}\t${sample.task_counts.cached}\t${sample.task_counts.failed}\t${sample.task_counts.aborted}\t${sample.task_counts.retried}\n"
+                tsvContent << "${sampleId}\t${sample.status}\t${sample.task_counts.total}\t${sample.task_counts.completed}\t${sample.task_counts.cached}\t${sample.task_counts.failed}\t${sample.task_counts.aborted}\t${sample.task_counts.failure_retried}\t${sample.task_counts.failure_ignored}\n"
             }
         }
         writeToFile(tsvContent.toString(), 'tsv')

@@ -69,13 +69,20 @@ nextflow_pipeline {
             assert path("$launchDir/reports/task-status-report.json").exists()
             def taskStatusReport = path("$launchDir/reports/task-status-report.json").json
             assert taskStatusReport.summary.total_tasks == 6
-            assert taskStatusReport.summary.failed == 6
+            // Tasks use errorStrategy 'ignore', so they are classified as IGNORED not FAILED
+            assert taskStatusReport.summary.failure_ignored == 6
+            assert taskStatusReport.summary.failed == 0
             def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
             assert sampleStatusReport.summary.total_samples == 3
             assert sampleStatusReport.summary.failed == 3
             assert sampleStatusReport.samples_by_status.COMPLETED == []
             def failedSamples = sampleStatusReport.samples_by_status.FAILED.collect { sample -> sample.sample_id }
             assert failedSamples.containsAll(['sample1', 'sample2', 'sample3'])
+            sampleStatusReport.samples_by_status.FAILED.each { sample ->
+                assert sample.task_counts.failure_ignored == 2
+                assert sample.task_counts.failed == 0
+                assert sample.task_counts.failure_retried == 0
+            }
         }
     }
 
@@ -93,7 +100,8 @@ nextflow_pipeline {
             assert path("$launchDir/reports/task-status-report.json").exists()
             def taskStatusReport = path("$launchDir/reports/task-status-report.json").json
             assert taskStatusReport.summary.total_tasks == 12
-            assert taskStatusReport.summary.failed == 6
+            assert taskStatusReport.summary.failure_ignored == 6
+            assert taskStatusReport.summary.failed == 0
             assert taskStatusReport.summary.completed == 6
             def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
             assert sampleStatusReport.summary.total_samples == 3
@@ -101,6 +109,12 @@ nextflow_pipeline {
             assert sampleStatusReport.samples_by_status.COMPLETED == []
             def partiallyCompletedSamples = sampleStatusReport.samples_by_status.PARTIALLY_COMPLETED.collect { sample -> sample.sample_id }
             assert partiallyCompletedSamples.containsAll(['sample1', 'sample2', 'sample3'])
+            sampleStatusReport.samples_by_status.PARTIALLY_COMPLETED.each { sample ->
+                assert sample.task_counts.failure_ignored == 2
+                assert sample.task_counts.completed == 2
+                assert sample.task_counts.failed == 0
+                assert sample.task_counts.total == 4
+            }
         }
     }
 
@@ -145,7 +159,8 @@ nextflow_pipeline {
             assert path("$launchDir/reports/task-status-report.json").exists()
             def taskStatusReport = path("$launchDir/reports/task-status-report.json").json
             assert taskStatusReport.summary.total_tasks == 20
-            assert taskStatusReport.summary.failed == 6
+            assert taskStatusReport.summary.failure_ignored == 6
+            assert taskStatusReport.summary.failed == 0
             assert taskStatusReport.summary.completed == 14
             def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
             assert sampleStatusReport.summary.total_samples == 5
@@ -155,6 +170,16 @@ nextflow_pipeline {
             def completedSamples = sampleStatusReport.samples_by_status.COMPLETED.collect { sample -> sample.sample_id }
             assert partiallyCompletedSamples.containsAll(['sample1', 'sample2', 'sample3'])
             assert completedSamples.containsAll(['sample4', 'sample5'])
+            // Partially completed samples have ignored failures
+            sampleStatusReport.samples_by_status.PARTIALLY_COMPLETED.each { sample ->
+                assert sample.task_counts.failure_ignored == 2
+                assert sample.task_counts.completed == 2
+            }
+            // Fully completed samples (no_fail=true) have no ignored failures
+            sampleStatusReport.samples_by_status.COMPLETED.each { sample ->
+                assert sample.task_counts.failure_ignored == 0
+                assert sample.task_counts.completed == 4
+            }
         }
     }
 
@@ -178,6 +203,143 @@ nextflow_pipeline {
             def completedSamples = sampleStatusReport.samples_by_status.COMPLETED.collect { sample -> sample.sample_id }
             assert partiallyCompletedSamples.containsAll(['sample1', 'sample2', 'sample3'])
             assert completedSamples.containsAll(['sample4', 'sample5'])
+        }
+    }
+
+    test("Generate report for workflow with ignored failures, retries, and successes") {
+        config "configs/all_report_default.config"
+        when {
+            // Run processes that always fail (errorStrategy 'ignore') -> IGNORED
+            params.run_processes_always_fail = true
+            // Run processes that always succeed -> COMPLETED
+            params.run_processes_always_succeed = true
+            // Run processes that fail then succeed on retry -> RETRIED + COMPLETED
+            params.run_processes_always_succeed_upon_retry = true
+        }
+        then {
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            assert path("$launchDir/reports/task-status-report.json").exists()
+            def taskStatusReport = path("$launchDir/reports/task-status-report.json").json
+            // 3 samples x (2 fail + 2 succeed + 2 retry-fail + 2 retry-succeed) = 24 tasks
+            assert taskStatusReport.summary.total_tasks == 24
+            assert taskStatusReport.summary.failure_ignored == 6
+            assert taskStatusReport.summary.retried == 6
+            assert taskStatusReport.summary.completed == 12
+            assert taskStatusReport.summary.failed == 0
+            def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
+            assert sampleStatusReport.summary.total_samples == 3
+            // All samples are PARTIALLY_COMPLETED because they have ignored failures
+            assert sampleStatusReport.summary.partially_completed == 3
+            assert sampleStatusReport.summary.completed == 0
+            assert sampleStatusReport.summary.failed == 0
+            sampleStatusReport.samples_by_status.PARTIALLY_COMPLETED.each { sample ->
+                assert sample.task_counts.failure_ignored == 2
+                assert sample.task_counts.failure_retried == 2
+                assert sample.task_counts.completed == 4
+                assert sample.task_counts.failed == 0
+                assert sample.task_counts.total == 8
+            }
+        }
+    }
+
+    test("Generate report for workflow with ignored failures and samples that never fail") {
+        config "configs/all_report_default.config"
+        when {
+            // Run processes that always fail (errorStrategy 'ignore')
+            params.run_processes_always_fail = true
+            // Include samples 4 and 5 which have no_fail=true (fail processes exit 0 for them)
+            params.include_samples_that_never_fail = true
+        }
+        then {
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            assert path("$launchDir/reports/task-status-report.json").exists()
+            def taskStatusReport = path("$launchDir/reports/task-status-report.json").json
+            // 5 samples x 2 fail processes = 10 tasks; samples 1-3 fail (6 ignored), samples 4-5 succeed (4 completed)
+            assert taskStatusReport.summary.total_tasks == 10
+            assert taskStatusReport.summary.failure_ignored == 6
+            assert taskStatusReport.summary.completed == 4
+            assert taskStatusReport.summary.failed == 0
+            def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
+            assert sampleStatusReport.summary.total_samples == 5
+            assert sampleStatusReport.summary.failed == 3
+            assert sampleStatusReport.summary.completed == 2
+            sampleStatusReport.samples_by_status.FAILED.each { sample ->
+                assert sample.task_counts.failure_ignored == 2
+                assert sample.task_counts.completed == 0
+                assert sample.task_counts.failed == 0
+            }
+            sampleStatusReport.samples_by_status.COMPLETED.each { sample ->
+                assert sample.task_counts.failure_ignored == 0
+                assert sample.task_counts.completed == 2
+            }
+        }
+    }
+
+    test("Completion summary is printed when printCompletionSummary is enabled") {
+        config "configs/sample_report_with_completion_summary.config"
+        when {
+            params.run_processes_always_fail = true
+            params.run_processes_always_succeed = true
+            params.include_samples_that_never_fail = true
+        }
+        then {
+            assert workflow.success
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
+            // Verify the report content is correct with printCompletionSummary enabled
+            assert sampleStatusReport.summary.total_samples == 5
+            assert sampleStatusReport.summary.partially_completed == 3
+            assert sampleStatusReport.summary.completed == 2
+        }
+    }
+
+    test("Task with Collection sample ID attributes to all samples in the list") {
+        config "configs/extract_multi_sample_from_meta.config"
+        when {
+            // Run multi-sample process: task1 -> [sample1, sample2], task2 -> [sample3]
+            params.run_processes_multi_sample = true
+        }
+        then {
+            assert workflow.success
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
+            // 3 distinct samples across 2 tasks
+            assert sampleStatusReport.summary.total_samples == 3
+            assert sampleStatusReport.summary.completed == 3
+            def completedIds = sampleStatusReport.samples_by_status.COMPLETED.collect { it.sample_id }.sort()
+            assert completedIds == ['sample1', 'sample2', 'sample3']
+            // sample1 and sample2 share the same task
+            def sample1 = sampleStatusReport.samples_by_status.COMPLETED.find { it.sample_id == 'sample1' }
+            def sample2 = sampleStatusReport.samples_by_status.COMPLETED.find { it.sample_id == 'sample2' }
+            def sample3 = sampleStatusReport.samples_by_status.COMPLETED.find { it.sample_id == 'sample3' }
+            assert sample1.task_counts.total == 1
+            assert sample2.task_counts.total == 1
+            assert sample3.task_counts.total == 1
+        }
+    }
+
+    test("Collection sample IDs with mixed success and failure") {
+        config "configs/extract_multi_sample_from_meta.config"
+        when {
+            // Multi-sample tasks + always-succeed tasks (which use single sample_name strings)
+            params.run_processes_multi_sample = true
+            params.run_processes_always_succeed = true
+        }
+        then {
+            assert workflow.success
+            assert path("$launchDir/reports/sample-status-report.json").exists()
+            def sampleStatusReport = path("$launchDir/reports/sample-status-report.json").json
+            // 3 samples: each has tasks from both multi-sample and always-succeed processes
+            assert sampleStatusReport.summary.total_samples == 3
+            assert sampleStatusReport.summary.completed == 3
+            // sample1 and sample2 get 1 multi-sample task + 2 always-succeed tasks = 3
+            def sample1 = sampleStatusReport.samples_by_status.COMPLETED.find { it.sample_id == 'sample1' }
+            def sample2 = sampleStatusReport.samples_by_status.COMPLETED.find { it.sample_id == 'sample2' }
+            assert sample1.task_counts.total == 3
+            assert sample2.task_counts.total == 3
+            // sample3 gets 1 multi-sample task + 2 always-succeed tasks = 3
+            def sample3 = sampleStatusReport.samples_by_status.COMPLETED.find { it.sample_id == 'sample3' }
+            assert sample3.task_counts.total == 3
         }
     }
 }

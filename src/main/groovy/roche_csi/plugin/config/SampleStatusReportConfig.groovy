@@ -56,6 +56,10 @@ class SampleStatusReportConfig implements ConfigScope {
     @Description('Regex pattern for matching meta map keys to extract sample name')
     String sampleNameMetaKeyPattern
 
+    @ConfigOption
+    @Description('Print a completion summary listing samples by status when the workflow finishes')
+    Boolean printCompletionSummary = false
+
     SampleStatusReportConfig() { }
 
     SampleStatusReportConfig(Map config, Map defaults = [:]) {
@@ -93,6 +97,9 @@ class SampleStatusReportConfig implements ConfigScope {
         if (config.containsKey('sampleNameMetaKeyPattern')) {
             this.sampleNameMetaKeyPattern = config.sampleNameMetaKeyPattern?.toString()
         }
+        if (config.containsKey('printCompletionSummary')) {
+            this.printCompletionSummary = config.printCompletionSummary as Boolean
+        }
     }
 
     Map toMap() {
@@ -109,6 +116,7 @@ class SampleStatusReportConfig implements ConfigScope {
             extractSampleNameFrom: extractSampleNameFrom,
             sampleNameTagPattern: sampleNameTagPattern,
             sampleNameMetaKeyPattern: sampleNameMetaKeyPattern,
+            printCompletionSummary: printCompletionSummary,
         ]
         return map
     }

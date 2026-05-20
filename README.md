@@ -7,7 +7,7 @@ A comprehensive reporting plugin for Nextflow that generates various reports dur
 The nf-report plugin provides multiple configurable report types:
 
 - **Execution Report**: Provides a detailed overview of the workflow execution, including start/end times, parameters, and metadata.
-- **Task Status Report**: Summarizes task execution details grouped by status (e.g., COMPLETED, FAILED, CACHED).
+- **Task Status Report**: Summarizes task execution details grouped by status (e.g., COMPLETED, FAILED, CACHED, RETRIED, ABORTED, IGNORED).
 - **Sample Status Report**: Tracks sample processing across the workflow, with samples grouped by their processing status.
 
 The reports can be generated in JSON and HTML formats, with customizable templates for HTML reports.
@@ -91,9 +91,10 @@ The following options are specific to the `sampleStatusReport`:
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `sampleStatus.extractSampleNameFrom` | Method to extract sample names (tag or meta_map) | tag |
-| `sampleStatus.sampleNameTagPattern` | Pattern for extracting sample names from task tags. Leave empty to use the entire tag |  |
-| `sampleStatus.sampleNameMetaKeyPattern` | Pattern for extracting sample names from metadata maps. Leave empty to use the first element in the meta map. |  |
+| `sampleStatusReport.extractSampleNameFrom` | Method to extract sample names (tag or meta_map) | tag |
+| `sampleStatusReport.sampleNameTagPattern` | Pattern for extracting sample names from task tags. Leave empty to use the entire tag |  |
+| `sampleStatusReport.sampleNameMetaKeyPattern` | Pattern for extracting sample names from metadata maps. Leave empty to use the first element in the meta map. |  |
+| `sampleStatusReport.printCompletionSummary` | Print a summary listing samples by status when the workflow finishes | false |
 
 #### Sample Name Extraction for Sample Status Reports
 
@@ -102,6 +103,8 @@ The sample status report provides flexibility in extracting sample names from wo
 - **Extract from Task Tags**: By default, sample names are extracted from the `tag` field of the task configuration. You can specify a pattern to match the tag using the `sampleNameTagPattern` option. If no pattern is provided, the entire tag will be used as the sample name.
 
 - **Extract from Metadata Map**: Alternatively, sample names can be extracted from the metadata map of task inputs. Use the `sampleNameMetaKeyPattern` option to define a pattern for matching metadata keys. The sample name will be taken from the value of the first matching key. If no pattern is provided, the first element in the metadata map will be used.
+
+- **Collection Support**: When using `meta_map` extraction, if the matched value is a Collection (e.g., a list of sample IDs), the task will be attributed to all samples in the collection. This is useful when a single task processes multiple samples. Non-string elements in the collection are converted via `toString()`. Empty collections are ignored.
 
 The following configuration demonstrates how to set these options: this configuration will configure the sample status report to extract sample names from the element with the key `sample_id` in the metadata map.
 
@@ -114,6 +117,8 @@ nfreport {
     }
 }
 ```
+
+If `sample_id` contains a list (e.g., `[sample_id: ['sampleA', 'sampleB']]`), the task will be tracked under both `sampleA` and `sampleB`.
 
 ### Email notification options
 
@@ -192,4 +197,4 @@ make assemble
 The plugin can be tested without a local Nextflow installation:
 
 1. Build and install the plugin to your local Nextflow installation: `make install`
-2. Run a pipeline with the plugin: `nextflow run hello -plugins nf-report@0.1.0`
+2. Run a pipeline with the plugin: `nextflow run hello -plugins nf-report@1.1.0`

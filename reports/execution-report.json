@@ -1,0 +1,86 @@
+{
+    "report_type": "execution-report",
+    "generated_at": "2026-05-14T16:09:09.821120235Z",
+    "events": [
+        {
+            "event_type": "workflow_start",
+            "timestamp": "2026-05-14T16:09:09.809006689Z",
+            "run_name": "reverent_shaw",
+            "script_id": "abc123",
+            "script_name": "main.nf",
+            "command_line": "nextflow run main.nf",
+            "params": null,
+            "repository": "https://github.com/test/repo",
+            "commit_id": "def456",
+            "revision": "main",
+            "start_time": "2026-05-14T16:09:09.794943172Z",
+            "nextflow_version": {
+                "major": "25",
+                "minor": "10",
+                "patch": "0"
+            },
+            "project_dir": "/test/project",
+            "launch_dir": "/workspaces/nf-report",
+            "output_dir": "/workspaces/nf-report/results",
+            "work_dir": "/workspaces/nf-report/work",
+            "home_dir": "/home/vscode",
+            "user_name": "vscode",
+            "profile": "standard",
+            "session_id": "7aac5698-bcd4-4a5e-87d3-274896aafbca",
+            "container_engine": "docker",
+            "config_files": [
+                "/test/nextflow.config"
+            ]
+        },
+        {
+            "event_type": "workflow_complete",
+            "timestamp": "2026-05-14T16:09:09.820664833Z",
+            "run_name": "reverent_shaw",
+            "script_id": "abc123",
+            "script_name": "main.nf",
+            "command_line": "nextflow run main.nf",
+            "params": null,
+            "repository": "https://github.com/test/repo",
+            "commit_id": "def456",
+            "revision": "main",
+            "start_time": "2026-05-14T16:09:09.794943172Z",
+            "end_time": "2026-05-14T16:09:09.815078547Z",
+            "duration": {
+                "durationInMillis": 20,
+                "days": 0,
+                "hours": 0,
+                "millis": 20,
+                "minutes": 0,
+                "seconds": 0,
+                "units": [
+                    "DAYS",
+                    "HOURS",
+                    "MINUTES",
+                    "SECONDS",
+                    "MILLIS"
+                ]
+            },
+            "success": true,
+            "exit_status": 0,
+            "error_message": null,
+            "error_report": null,
+            "nextflow_version": {
+                "major": "25",
+                "minor": "10",
+                "patch": "0"
+            },
+            "project_dir": "/test/project",
+            "launch_dir": "/workspaces/nf-report",
+            "output_dir": "/workspaces/nf-report/results",
+            "work_dir": "/workspaces/nf-report/work",
+            "home_dir": "/home/vscode",
+            "user_name": "vscode",
+            "profile": "standard",
+            "session_id": "7aac5698-bcd4-4a5e-87d3-274896aafbca",
+            "container_engine": "docker",
+            "config_files": [
+                "/test/nextflow.config"
+            ]
+        }
+    ]
+}

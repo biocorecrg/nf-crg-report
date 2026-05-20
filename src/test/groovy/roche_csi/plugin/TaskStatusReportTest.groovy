@@ -82,6 +82,7 @@ class TaskStatusReportTest extends Specification {
         assert result.summary.failed == 0
         assert result.summary.aborted == 0
         assert result.summary.retried == 0
+        assert result.summary.failure_ignored == 0
         assert result.tasks_by_status.COMPLETED.size() == 1
     }
 
@@ -208,6 +209,7 @@ class TaskStatusReportTest extends Specification {
         def handlerCached = createHandler('task3', 'sample3', 102)
         def handlerRetried = createHandler('task4', 'sample4', 103)
         def handlerAborted = createHandler('task5', 'sample5', 104)
+        def handlerIgnored = createHandler('task6', 'sample6', 105)
 
         def recordCompleted = new TraceRecord()
         recordCompleted.status = 'COMPLETED'
@@ -226,26 +228,33 @@ class TaskStatusReportTest extends Specification {
         def recordAborted = new TraceRecord()
         recordAborted.status = 'ABORTED'
 
+        def recordIgnored = new TraceRecord()
+        recordIgnored.status = 'FAILED'
+        recordIgnored.error_action = 'IGNORE'
+
         when:
         taskStatusReport.onTaskComplete(handlerCompleted, recordCompleted)
         taskStatusReport.onTaskComplete(handlerFailed, recordFailed)
         taskStatusReport.onTaskCached(handlerCached, recordCached)
         taskStatusReport.onTaskComplete(handlerRetried, recordRetried)
         taskStatusReport.onTaskComplete(handlerAborted, recordAborted)
+        taskStatusReport.onTaskComplete(handlerIgnored, recordIgnored)
 
         then:
         def result = taskStatusReport.toMap()
-        assert result.summary.total_tasks == 5
+        assert result.summary.total_tasks == 6
         assert result.summary.completed == 1
         assert result.summary.failed == 1
         assert result.summary.cached == 1
         assert result.summary.retried == 1
         assert result.summary.aborted == 1
+        assert result.summary.failure_ignored == 1
         assert result.tasks_by_status.COMPLETED.size() == 1
         assert result.tasks_by_status.FAILED.size() == 1
         assert result.tasks_by_status.CACHED.size() == 1
         assert result.tasks_by_status.RETRIED.size() == 1
         assert result.tasks_by_status.ABORTED.size() == 1
+        assert result.tasks_by_status.IGNORED.size() == 1
     }
 
     def 'summary total_tasks matches sum of individual status counts'() {
@@ -260,6 +269,7 @@ class TaskStatusReportTest extends Specification {
         def h4 = createHandler('task4', 'sample2', 103)
         def h5 = createHandler('task5', 'sample3', 104)
         def h6 = createHandler('task6', 'sample3', 105)
+        def h7 = createHandler('task7', 'sample3', 106)
 
         def r1 = new TraceRecord(); r1.status = 'COMPLETED'
         def r2 = new TraceRecord(); r2.status = 'COMPLETED'
@@ -267,6 +277,7 @@ class TaskStatusReportTest extends Specification {
         def r4 = new TraceRecord(); r4.status = 'FAILED'; r4.error_action = 'RETRY'; r4.attempt = 1
         def r5 = new TraceRecord(); r5.status = 'CACHED'
         def r6 = new TraceRecord(); r6.status = 'ABORTED'
+        def r7 = new TraceRecord(); r7.status = 'FAILED'; r7.error_action = 'IGNORE'
 
         when:
         taskStatusReport.onTaskComplete(h1, r1)
@@ -275,18 +286,20 @@ class TaskStatusReportTest extends Specification {
         taskStatusReport.onTaskComplete(h4, r4)
         taskStatusReport.onTaskCached(h5, r5)
         taskStatusReport.onTaskComplete(h6, r6)
+        taskStatusReport.onTaskComplete(h7, r7)
 
         then:
         def result = taskStatusReport.toMap()
         def summary = result.summary
-        def sumOfCounts = summary.completed + summary.cached + summary.failed + summary.retried + summary.aborted
+        def sumOfCounts = summary.completed + summary.cached + summary.failed + summary.retried + summary.aborted + summary.failure_ignored
         assert summary.total_tasks == sumOfCounts
-        assert summary.total_tasks == 6
+        assert summary.total_tasks == 7
         assert summary.completed == 2
         assert summary.failed == 1
         assert summary.retried == 1
         assert summary.cached == 1
         assert summary.aborted == 1
+        assert summary.failure_ignored == 1
     }
 
     def 'onTaskComplete triggered via observer correctly accounts tasks'() {
@@ -400,11 +413,67 @@ class TaskStatusReportTest extends Specification {
         assert result.summary.failed == 0
         assert result.summary.aborted == 0
         assert result.summary.retried == 0
+        assert result.summary.failure_ignored == 0
         assert result.tasks_by_status.COMPLETED.isEmpty()
         assert result.tasks_by_status.CACHED.isEmpty()
         assert result.tasks_by_status.FAILED.isEmpty()
         assert result.tasks_by_status.ABORTED.isEmpty()
         assert result.tasks_by_status.RETRIED.isEmpty()
+        assert result.tasks_by_status.IGNORED.isEmpty()
+    }
+
+    def 'task status report groups an ignored task correctly when error_action is IGNORE'() {
+        given:
+        def observer = createObserverWithTaskStatusReport()
+        def taskStatusReport = getTaskStatusReport(observer)
+
+        def handler = createHandler('task1', 'sample1')
+
+        def record = new TraceRecord()
+        record.status = 'FAILED'
+        record.error_action = 'IGNORE'
+
+        when:
+        taskStatusReport.onTaskComplete(handler, record)
+
+        then:
+        def result = taskStatusReport.toMap()
+        assert result.summary.total_tasks == 1
+        assert result.summary.failure_ignored == 1
+        assert result.summary.failed == 0
+        assert result.summary.completed == 0
+        assert result.tasks_by_status.IGNORED.size() == 1
+        assert result.tasks_by_status.FAILED.isEmpty()
+    }
+
+    def 'task status report groups ignored and completed tasks correctly'() {
+        given:
+        def observer = createObserverWithTaskStatusReport()
+        def taskStatusReport = getTaskStatusReport(observer)
+
+        def handler1 = createHandler('task1', 'sample1', 100)
+        def handler2 = createHandler('task2', 'sample1', 101)
+
+        def recordCompleted = new TraceRecord()
+        recordCompleted.status = 'COMPLETED'
+
+        def recordIgnored = new TraceRecord()
+        recordIgnored.status = 'FAILED'
+        recordIgnored.error_action = 'IGNORE'
+
+        when:
+        taskStatusReport.onTaskComplete(handler1, recordCompleted)
+        taskStatusReport.onTaskComplete(handler2, recordIgnored)
+
+        then:
+        def result = taskStatusReport.toMap()
+        assert result.summary.total_tasks == 2
+        assert result.summary.completed == 1
+        assert result.summary.failure_ignored == 1
+        assert result.summary.failed == 0
+        assert result.tasks_by_status.COMPLETED.size() == 1
+        assert result.tasks_by_status.IGNORED.size() == 1
+        assert result.tasks_by_status.FAILED.isEmpty()
     }
 
 }

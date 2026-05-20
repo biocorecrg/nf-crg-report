@@ -26,7 +26,8 @@ class TaskStatusReport extends BaseReport {
         'CACHED': [],
         'FAILED': [],
         'ABORTED': [],
-        'RETRIED': []
+        'RETRIED': [],
+        'IGNORED': []
     ]
 
     private List<Map> tasks = []
@@ -50,6 +51,8 @@ class TaskStatusReport extends BaseReport {
         def status = trace.get('status')?.toString() ?: 'COMPLETED'
         if (trace.error_action == 'RETRY') {
             status = 'RETRIED'
+        } else if (trace.error_action == 'IGNORE') {
+            status = 'IGNORED'
         }
         def taskData = createTaskData(handler, trace, status).findAll { k, v -> fields.isEmpty() || fields.contains(k) }
         recordTask(status, taskData)
@@ -156,7 +159,8 @@ class TaskStatusReport extends BaseReport {
                     cached: tasksByStatus['CACHED'].size(),
                     failed: tasksByStatus['FAILED'].size(),
                     aborted: tasksByStatus['ABORTED'].size(),
-                    retried: tasksByStatus['RETRIED'].size()
+                    retried: tasksByStatus['RETRIED'].size(),
+                    failure_ignored: tasksByStatus['IGNORED'].size()
                 ],
                 tasks_by_status: tasksByStatus
             ]

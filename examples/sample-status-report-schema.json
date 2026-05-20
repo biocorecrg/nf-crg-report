@@ -168,7 +168,10 @@
                   "aborted": {
                     "type": "number"
                   },
-                  "retried": {
+                  "failure_retried": {
+                    "type": "number"
+                  },
+                  "failure_ignored": {
                     "type": "number"
                   }
                 },
@@ -178,7 +181,8 @@
                   "cached",
                   "failed",
                   "aborted",
-                  "retried"
+                  "failure_retried",
+                  "failure_ignored"
                 ]
               },
               "first_task_start": {
@@ -338,7 +342,10 @@
                   "aborted": {
                     "type": "number"
                   },
-                  "retried": {
+                  "failure_retried": {
+                    "type": "number"
+                  },
+                  "failure_ignored": {
                     "type": "number"
                   }
                 },
@@ -348,7 +355,8 @@
                   "cached",
                   "failed",
                   "aborted",
-                  "retried"
+                  "failure_retried",
+                  "failure_ignored"
                 ]
               },
               "first_task_start": {
@@ -508,7 +516,10 @@
                   "aborted": {
                     "type": "number"
                   },
-                  "retried": {
+                  "failure_retried": {
+                    "type": "number"
+                  },
+                  "failure_ignored": {
                     "type": "number"
                   }
                 },
@@ -518,7 +529,8 @@
                   "cached",
                   "failed",
                   "aborted",
-                  "retried"
+                  "failure_retried",
+                  "failure_ignored"
                 ]
               },
               "first_task_start": {
@@ -678,7 +690,10 @@
                   "aborted": {
                     "type": "number"
                   },
-                  "retried": {
+                  "failure_retried": {
+                    "type": "number"
+                  },
+                  "failure_ignored": {
                     "type": "number"
                   }
                 },
@@ -688,7 +703,8 @@
                   "cached",
                   "failed",
                   "aborted",
-                  "retried"
+                  "failure_retried",
+                  "failure_ignored"
                 ]
               },
               "first_task_start": {

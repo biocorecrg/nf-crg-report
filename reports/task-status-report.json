@@ -1,0 +1,89 @@
+{
+    "report_type": "task-status-report",
+    "generated_at": "2026-05-14T16:09:11.77580135Z",
+    "summary": {
+        "total_tasks": 2,
+        "completed": 1,
+        "cached": 0,
+        "failed": 0,
+        "aborted": 0,
+        "retried": 0,
+        "failure_ignored": 1
+    },
+    "tasks_by_status": {
+        "COMPLETED": [
+            {
+                "task_id": null,
+                "hash": null,
+                "process_name": "TestProcess",
+                "task_name": "task1",
+                "tag": "sample1",
+                "status": "COMPLETED",
+                "exit_status": null,
+                "submit_time": "1970-01-01T00:00:00Z",
+                "start_time": "1970-01-01T00:00:00Z",
+                "complete_time": "1970-01-01T00:00:00Z",
+                "duration_ms": 0,
+                "realtime_ms": 0,
+                "attempt": 1,
+                "rchar": null,
+                "wchar": null,
+                "pct_cpu": null,
+                "peak_rss": null,
+                "peak_vmem": null,
+                "workdir": null,
+                "log": null,
+                "out": null,
+                "err": null,
+                "scratch": null,
+                "container": null,
+                "outputs": [
+
+                ]
+            }
+        ],
+        "CACHED": [
+
+        ],
+        "FAILED": [
+
+        ],
+        "ABORTED": [
+
+        ],
+        "RETRIED": [
+
+        ],
+        "IGNORED": [
+            {
+                "task_id": null,
+                "hash": null,
+                "process_name": "TestProcess",
+                "task_name": "task2",
+                "tag": "sample1",
+                "status": "FAILED",
+                "exit_status": null,
+                "submit_time": "1970-01-01T00:00:00Z",
+                "start_time": "1970-01-01T00:00:00Z",
+                "complete_time": "1970-01-01T00:00:00Z",
+                "duration_ms": 0,
+                "realtime_ms": 0,
+                "attempt": 1,
+                "rchar": null,
+                "wchar": null,
+                "pct_cpu": null,
+                "peak_rss": null,
+                "peak_vmem": null,
+                "workdir": null,
+                "log": null,
+                "out": null,
+                "err": null,
+                "scratch": null,
+                "container": null,
+                "outputs": [
+
+                ]
+            }
+        ]
+    }
+}
