@@ -17,11 +17,14 @@ dependencies {
 nextflowPlugin {
     nextflowVersion = '25.10.0'
 
-    provider = 'Roche'
+    provider = 'biocorecrg'
     className = 'roche_csi.plugin.NfReportPlugin'
     extensionPoints = [
         'roche_csi.plugin.config.NfReportConfig',
         'roche_csi.plugin.NfReportExtension',
         'roche_csi.plugin.NfReportFactory'
     ]
+    registry {
+        apiKey = System.getenv('NPR_API_KEY') ?: (project.findProperty('npr.apiKey') ?: '')
+    }
 }

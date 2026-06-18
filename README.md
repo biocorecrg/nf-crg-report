@@ -238,3 +238,8 @@ The plugin can be tested without a local Nextflow installation:
 
 1. Build and install the plugin to your local Nextflow installation: `make install`
 2. Run a pipeline with the plugin: `nextflow run hello -plugins nf-crg-report@1.1.1`
+
+## License
+
+This project is licensed under the Apache License, Version 2.0. See the [COPYING](COPYING) file for details.
+
