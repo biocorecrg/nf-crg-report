@@ -246,44 +246,45 @@ class TaskStatusReport extends BaseReport {
                 }
             }
             def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
-            def headJobCpus = (costConfig.headJobCpus ?: 0) as int
-            def headJobMemoryGb = (costConfig.headJobMemoryGb ?: 0.0) as double
-            def headJobGpus = (costConfig.headJobGpus ?: 0) as int
+            def launchFile = costConfig.launchFile ?: null
 
             double headJobCost = 0.0
-            if (headJobCpus > 0 || headJobMemoryGb > 0.0 || headJobGpus > 0) {
-                def workflowInfo = session.workflowMetadata
-                long durationMs = 0
-                if (workflowInfo.start) {
-                    def start = workflowInfo.start.toInstant()
-                    def complete = workflowInfo.complete ? workflowInfo.complete.toInstant() : Instant.now()
-                    durationMs = java.time.Duration.between(start, complete).toMillis()
+            if (launchFile) {
+                def parsed = parseLaunchScript(launchFile)
+                if (parsed.cpus > 0 || parsed.memoryGb > 0.0 || parsed.gpus > 0) {
+                    def workflowInfo = session.workflowMetadata
+                    long durationMs = 0
+                    if (workflowInfo.start) {
+                        def start = workflowInfo.start.toInstant()
+                        def complete = workflowInfo.complete ? workflowInfo.complete.toInstant() : Instant.now()
+                        durationMs = java.time.Duration.between(start, complete).toMillis()
+                    }
+                    double hours = durationMs / (1000.0 * 60.0 * 60.0)
+
+                    // Read pricing to get rates
+                    def priceJsonPath = costConfig.priceJsonPath ?: null
+                    def priceAPI = costConfig.priceAPI ?: null
+                    def prices = [:]
+                    if (priceAPI) {
+                        try { prices = fetchPriceAPI(priceAPI) } catch (Exception e) {}
+                    } else if (priceJsonPath) {
+                        try { prices = parsePriceJson(priceJsonPath) } catch (Exception e) {}
+                    }
+
+                    def kCPUHr = (prices.kCPUHr != null ? prices.kCPUHr : costConfig.kCPUHr ?: 0.0) as double
+                    def kGBHr = (prices.kGBHr != null ? prices.kGBHr : costConfig.kGBHr ?: 0.0) as double
+                    def kGPUGBHr = (prices.kGPUGBHr != null ? prices.kGPUGBHr : costConfig.kGPUGBHr ?: 0.0) as double
+                    def defaultGpuMemGb = (costConfig.defaultGpuMemGb ?: 16) as double
+
+                    def cpuRate = kCPUHr / 1000.0
+                    def memGbRate = kGBHr / 1000.0
+                    def gpuGbRate = kGPUGBHr / 1000.0
+
+                    def cpuCost = parsed.cpus * hours * cpuRate
+                    def memCost = parsed.memoryGb * hours * memGbRate
+                    def gpuCost = parsed.gpus * defaultGpuMemGb * hours * gpuGbRate
+                    headJobCost = cpuCost + memCost + gpuCost
                 }
-                double hours = durationMs / (1000.0 * 60.0 * 60.0)
-
-                // Read pricing to get rates
-                def priceJsonPath = costConfig.priceJsonPath ?: null
-                def priceAPI = costConfig.priceAPI ?: null
-                def prices = [:]
-                if (priceAPI) {
-                    try { prices = fetchPriceAPI(priceAPI) } catch (Exception e) {}
-                } else if (priceJsonPath) {
-                    try { prices = parsePriceJson(priceJsonPath) } catch (Exception e) {}
-                }
-
-                def kCPUHr = (prices.kCPUHr != null ? prices.kCPUHr : costConfig.kCPUHr ?: 0.0) as double
-                def kGBHr = (prices.kGBHr != null ? prices.kGBHr : costConfig.kGBHr ?: 0.0) as double
-                def kGPUGBHr = (prices.kGPUGBHr != null ? prices.kGPUGBHr : costConfig.kGPUGBHr ?: 0.0) as double
-                def defaultGpuMemGb = (costConfig.defaultGpuMemGb ?: 16) as double
-
-                def cpuRate = kCPUHr / 1000.0
-                def memGbRate = kGBHr / 1000.0
-                def gpuGbRate = kGPUGBHr / 1000.0
-
-                def cpuCost = headJobCpus * hours * cpuRate
-                def memCost = headJobMemoryGb * hours * memGbRate
-                def gpuCost = headJobGpus * defaultGpuMemGb * hours * gpuGbRate
-                headJobCost = cpuCost + memCost + gpuCost
             }
 
             double finalCompute = totalCompute + headJobCost
@@ -409,6 +410,68 @@ class TaskStatusReport extends BaseReport {
         def text = conn.getInputStream().getText("UTF-8")
         def cleanText = text.replaceAll(/(?m)\/\/.*$/, "").replaceAll(/(?m)#.*$/, "")
         return new groovy.json.JsonSlurper().parseText(cleanText) as Map
+    }
+
+    private Map parseLaunchScript(String path) {
+        def res = [cpus: 0, memoryGb: 0.0, gpus: 0]
+        if (!path) return res
+        def file = new File(path)
+        if (!file.exists()) {
+            log.warn("Launch script not found at: ${path}")
+            return res
+        }
+        
+        boolean hasSlurm = false
+        boolean hasSge = false
+
+        file.eachLine { line ->
+            line = line.trim()
+            if (line.startsWith('#SBATCH')) {
+                hasSlurm = true
+                def cpuMatcher = line =~ /(?:--cpus-per-task|-c)[=\s]+(\d+)/
+                if (cpuMatcher.find()) {
+                    res.cpus = cpuMatcher.group(1) as int
+                }
+                
+                def memMatcher = line =~ /(?:--mem|--mem-per-cpu)[=\s]+(\d+)([KMGTPkmgtp]?)/
+                if (memMatcher.find()) {
+                    double val = memMatcher.group(1) as double
+                    String unit = memMatcher.group(2)?.toUpperCase() ?: 'M'
+                    if (unit == 'K') res.memoryGb = val / (1024.0 * 1024.0)
+                    else if (unit == 'M') res.memoryGb = val / 1024.0
+                    else if (unit == 'G') res.memoryGb = val
+                    else if (unit == 'T') res.memoryGb = val * 1024.0
+                    else if (unit == 'P') res.memoryGb = val * 1024.0 * 1024.0
+                }
+                
+                def gpuMatcher = line =~ /(?:--gpus|gpu:)(\d+)/
+                if (gpuMatcher.find()) {
+                    res.gpus = gpuMatcher.group(1) as int
+                }
+            } else if (line.startsWith('#$')) {
+                hasSge = true
+                def cpuMatcher = line =~ /-pe\s+\S+\s+(\d+)/
+                if (cpuMatcher.find()) {
+                    res.cpus = cpuMatcher.group(1) as int
+                }
+                
+                def memMatcher = line =~ /-l\s+(?:h_vmem|m_mem_free)[=\s]+(\d+)([KMGTPkmgtp]?)/
+                if (memMatcher.find()) {
+                    double val = memMatcher.group(1) as double
+                    String unit = memMatcher.group(2)?.toUpperCase() ?: 'M'
+                    if (unit == 'K') res.memoryGb = val / (1024.0 * 1024.0)
+                    else if (unit == 'M') res.memoryGb = val / 1024.0
+                    else if (unit == 'G') res.memoryGb = val
+                    else if (unit == 'T') res.memoryGb = val * 1024.0
+                    else if (unit == 'P') res.memoryGb = val * 1024.0 * 1024.0
+                }
+            }
+        }
+        
+        if (hasSlurm && res.cpus == 0) res.cpus = 1
+        if (hasSge && res.cpus == 0) res.cpus = 1
+
+        return res
     }
 
 }

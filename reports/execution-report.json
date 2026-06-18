@@ -1,11 +1,11 @@
 {
     "report_type": "execution-report",
-    "generated_at": "2026-06-18T18:18:11.408721+02:00",
+    "generated_at": "2026-06-18T18:23:17.698395+02:00",
     "events": [
         {
             "event_type": "workflow_start",
-            "timestamp": "2026-06-18T18:18:11.407033+02:00",
-            "run_name": "exotic_curie",
+            "timestamp": "2026-06-18T18:23:17.696563+02:00",
+            "run_name": "disturbed_moriondo",
             "script_id": "abc123",
             "script_name": "main.nf",
             "command_line": "nextflow run main.nf",
@@ -13,7 +13,7 @@
             "repository": "https://github.com/test/repo",
             "commit_id": "def456",
             "revision": "main",
-            "start_time": "2026-06-18T18:18:11.405046+02:00",
+            "start_time": "2026-06-18T18:23:17.694216+02:00",
             "nextflow_version": {
                 "major": "25",
                 "minor": "10",
@@ -26,7 +26,7 @@
             "home_dir": "/Users/lcozzuto",
             "user_name": "lcozzuto",
             "profile": "standard",
-            "session_id": "38c2bad1-3ab5-44c7-841b-6abbe0de983c",
+            "session_id": "984ebef2-3090-4689-b4e1-9fceaa8231c5",
             "container_engine": "docker",
             "config_files": [
                 "/test/nextflow.config"
@@ -34,8 +34,8 @@
         },
         {
             "event_type": "workflow_complete",
-            "timestamp": "2026-06-18T18:18:11.408627+02:00",
-            "run_name": "exotic_curie",
+            "timestamp": "2026-06-18T18:23:17.698236+02:00",
+            "run_name": "disturbed_moriondo",
             "script_id": "abc123",
             "script_name": "main.nf",
             "command_line": "nextflow run main.nf",
@@ -43,13 +43,13 @@
             "repository": "https://github.com/test/repo",
             "commit_id": "def456",
             "revision": "main",
-            "start_time": "2026-06-18T18:18:11.405046+02:00",
-            "end_time": "2026-06-18T18:18:11.408035+02:00",
+            "start_time": "2026-06-18T18:23:17.694216+02:00",
+            "end_time": "2026-06-18T18:23:17.697656+02:00",
             "duration": {
-                "durationInMillis": 2,
+                "durationInMillis": 3,
                 "days": 0,
                 "hours": 0,
-                "millis": 2,
+                "millis": 3,
                 "minutes": 0,
                 "seconds": 0,
                 "units": [
@@ -76,7 +76,7 @@
             "home_dir": "/Users/lcozzuto",
             "user_name": "lcozzuto",
             "profile": "standard",
-            "session_id": "38c2bad1-3ab5-44c7-841b-6abbe0de983c",
+            "session_id": "984ebef2-3090-4689-b4e1-9fceaa8231c5",
             "container_engine": "docker",
             "config_files": [
                 "/test/nextflow.config"

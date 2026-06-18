@@ -149,9 +149,7 @@ The `nf-crg-report` plugin can estimate the execution costs (compute and storage
 | `costs.kGBHr` | Default cost of 1,000 GB RAM hours | `0.0` |
 | `costs.kGPUGBHr` | Default cost of 1,000 GB GPU memory hours | `0.0` |
 | `costs.TBMonth` | Default cost of 1 TB storage per month | `0.0` |
-| `costs.headJobCpus` | Number of CPUs allocated for the Nextflow workflow head job | `0` |
-| `costs.headJobMemoryGb` | Memory (in GB) allocated for the Nextflow workflow head job | `0.0` |
-| `costs.headJobGpus` | Number of GPUs allocated for the Nextflow workflow head job | `0` |
+| `costs.launchFile` | Path to the shell script used to submit/launch Nextflow (e.g., `launch_nf.sh`). If set, dynamically parses scheduler directives (Slurm/SGE) for head job resource pricing. | |
 
 #### Pricing JSON Format
 
@@ -240,7 +238,7 @@ make assemble
 The plugin can be tested without a local Nextflow installation:
 
 1. Build and install the plugin to your local Nextflow installation: `make install`
-2. Run a pipeline with the plugin: `nextflow run hello -plugins nf-crg-report@1.1.2`
+2. Run a pipeline with the plugin: `nextflow run hello -plugins nf-crg-report@1.1.3`
 
 ## License
 
