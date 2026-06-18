@@ -1,6 +1,6 @@
 {
     "report_type": "task-status-report",
-    "generated_at": "2026-06-18T17:55:19.28106+02:00",
+    "generated_at": "2026-06-18T18:18:11.80485+02:00",
     "summary": {
         "total_tasks": 2,
         "completed": 1,
@@ -9,6 +9,9 @@
         "aborted": 0,
         "retried": 0,
         "failure_ignored": 1,
+        "has_head_job_cost": false,
+        "tasks_compute_cost": "\u20ac0.0000",
+        "head_job_cost": "\u20ac0.0000",
         "total_compute_cost": "\u20ac0.0000",
         "projected_monthly_storage_cost": "\u20ac0.0000",
         "total_estimated_cost": "\u20ac0.0000"

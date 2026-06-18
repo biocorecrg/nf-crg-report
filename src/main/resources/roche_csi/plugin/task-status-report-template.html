@@ -52,6 +52,10 @@
         <li>Cached: ${summary.cached}</li>
         <li>Failed: ${summary.failed}</li>
         <% if (summary.total_estimated_cost) { %>
+            <% if (summary.has_head_job_cost) { %>
+            <li>Tasks Compute Cost: ${summary.tasks_compute_cost}</li>
+            <li>Head Job Cost: ${summary.head_job_cost}</li>
+            <% } %>
         <li>Total Compute Cost: ${summary.total_compute_cost}</li>
         <li>Projected Monthly Storage Cost: ${summary.projected_monthly_storage_cost}</li>
         <li>Total Estimated Cost (Compute + Storage): ${summary.total_estimated_cost}</li>

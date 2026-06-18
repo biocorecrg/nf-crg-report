@@ -245,6 +245,48 @@ class TaskStatusReport extends BaseReport {
                     totalStorage += (task.raw_storage_cost ?: 0.0) as double
                 }
             }
+            def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
+            def headJobCpus = (costConfig.headJobCpus ?: 0) as int
+            def headJobMemoryGb = (costConfig.headJobMemoryGb ?: 0.0) as double
+            def headJobGpus = (costConfig.headJobGpus ?: 0) as int
+
+            double headJobCost = 0.0
+            if (headJobCpus > 0 || headJobMemoryGb > 0.0 || headJobGpus > 0) {
+                def workflowInfo = session.workflowMetadata
+                long durationMs = 0
+                if (workflowInfo.start) {
+                    def start = workflowInfo.start.toInstant()
+                    def complete = workflowInfo.complete ? workflowInfo.complete.toInstant() : Instant.now()
+                    durationMs = java.time.Duration.between(start, complete).toMillis()
+                }
+                double hours = durationMs / (1000.0 * 60.0 * 60.0)
+
+                // Read pricing to get rates
+                def priceJsonPath = costConfig.priceJsonPath ?: null
+                def priceAPI = costConfig.priceAPI ?: null
+                def prices = [:]
+                if (priceAPI) {
+                    try { prices = fetchPriceAPI(priceAPI) } catch (Exception e) {}
+                } else if (priceJsonPath) {
+                    try { prices = parsePriceJson(priceJsonPath) } catch (Exception e) {}
+                }
+
+                def kCPUHr = (prices.kCPUHr != null ? prices.kCPUHr : costConfig.kCPUHr ?: 0.0) as double
+                def kGBHr = (prices.kGBHr != null ? prices.kGBHr : costConfig.kGBHr ?: 0.0) as double
+                def kGPUGBHr = (prices.kGPUGBHr != null ? prices.kGPUGBHr : costConfig.kGPUGBHr ?: 0.0) as double
+                def defaultGpuMemGb = (costConfig.defaultGpuMemGb ?: 16) as double
+
+                def cpuRate = kCPUHr / 1000.0
+                def memGbRate = kGBHr / 1000.0
+                def gpuGbRate = kGPUGBHr / 1000.0
+
+                def cpuCost = headJobCpus * hours * cpuRate
+                def memCost = headJobMemoryGb * hours * memGbRate
+                def gpuCost = headJobGpus * defaultGpuMemGb * hours * gpuGbRate
+                headJobCost = cpuCost + memCost + gpuCost
+            }
+
+            double finalCompute = totalCompute + headJobCost
             def symbol = getCurrencySymbol()
             map << [
                 summary: [
@@ -255,9 +297,12 @@ class TaskStatusReport extends BaseReport {
                     aborted: tasksByStatus['ABORTED'].size(),
                     retried: tasksByStatus['RETRIED'].size(),
                     failure_ignored: tasksByStatus['IGNORED'].size(),
-                    total_compute_cost: "${symbol}${String.format('%.4f', totalCompute)}",
+                    has_head_job_cost: headJobCost > 0.0,
+                    tasks_compute_cost: "${symbol}${String.format('%.4f', totalCompute)}",
+                    head_job_cost: "${symbol}${String.format('%.4f', headJobCost)}",
+                    total_compute_cost: "${symbol}${String.format('%.4f', finalCompute)}",
                     projected_monthly_storage_cost: "${symbol}${String.format('%.4f', totalStorage)}",
-                    total_estimated_cost: "${symbol}${String.format('%.4f', totalCompute + totalStorage)}"
+                    total_estimated_cost: "${symbol}${String.format('%.4f', finalCompute + totalStorage)}"
                 ],
                 tasks_by_status: tasksByStatus
             ]
