@@ -29,7 +29,7 @@ class NfReportConfig implements ConfigScope {
 
     @ConfigOption
     @Description('Default suffix for report filenames')
-    String suffix = ''
+    String suffix
 
     @ConfigOption
     @Description('Create a symbolic link to the latest report')
@@ -87,7 +87,9 @@ class NfReportConfig implements ConfigScope {
             }
         }
         if (config.containsKey('suffix')) {
-            if (config.suffix in CharSequence) {
+            if (config.suffix == null) {
+                this.suffix = null
+            } else if (config.suffix in CharSequence) {
                 this.suffix = config.suffix.toString()
             } else {
                 log.warn("Invalid value for 'nfreport.suffix', expected a String. Using default: ${this.suffix}")

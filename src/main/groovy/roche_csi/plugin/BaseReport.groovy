@@ -48,6 +48,9 @@ abstract class BaseReport {
         this.prefix = config.prefix ?: ''
         def timestamp = (session?.workflowMetadata?.start) ? session.workflowMetadata.start.format(java.time.format.DateTimeFormatter.ofPattern('yyyyMMddHHmmss')) : new Date().format('yyyyMMddHHmmss')
         this.suffix = config.suffix != null ? config.suffix : "-${timestamp}"
+        if (this.suffix == null) {
+            this.suffix = ''
+        }
         if (config.format) {
             this.format = config.format instanceof List ? config.format as List<String> : [(config.format as String).toLowerCase()]
         } else {

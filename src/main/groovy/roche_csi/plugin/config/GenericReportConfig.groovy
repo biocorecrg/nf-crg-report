@@ -26,7 +26,7 @@ class GenericReportConfig implements ConfigScope {
 
     @ConfigOption
     @Description('Suffix for the report filename')
-    String suffix = ''
+    String suffix
 
     @ConfigOption
     @Description('Custom output filename for the report')
@@ -57,7 +57,7 @@ class GenericReportConfig implements ConfigScope {
         this.format = config.containsKey('format') ? config.format : defaults.format ?: 'json'
         this.outputDir = config.containsKey('outputDir') ? config.outputDir?.toString() : defaults.outputDir ?: './reports'
         this.prefix = config.containsKey('prefix') ? config.prefix?.toString() ?: '' : defaults.prefix ?: ''
-        this.suffix = config.containsKey('suffix') ? config.suffix?.toString() ?: '' : defaults.suffix ?: ''
+        this.suffix = config.containsKey('suffix') ? (config.suffix != null ? config.suffix.toString() : null) : (defaults.containsKey('suffix') ? (defaults.suffix != null ? defaults.suffix.toString() : null) : null)
         if (config.containsKey('outputFilename')) {
             this.outputFilename = config.outputFilename?.toString()
         }
