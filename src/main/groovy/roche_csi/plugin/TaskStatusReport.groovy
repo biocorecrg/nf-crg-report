@@ -110,9 +110,11 @@ class TaskStatusReport extends BaseReport {
             try {
                 prices = fetchPriceAPI(priceAPI)
             } catch (Exception e) {
-                if (!hasLoggedPricingWarning) {
-                    log.warn("Failed to fetch or parse pricing API at ${priceAPI}: ${e.message}. Cost estimation will default to 0.0.")
-                    hasLoggedPricingWarning = true
+                synchronized(this) {
+                    if (!hasLoggedPricingWarning) {
+                        log.warn("Failed to fetch or parse pricing API at ${priceAPI}: ${e.message}. Cost estimation will default to 0.0.")
+                        hasLoggedPricingWarning = true
+                    }
                 }
             }
         } else if (priceJsonPath) {
@@ -120,19 +122,29 @@ class TaskStatusReport extends BaseReport {
                 def file = new File(priceJsonPath)
                 if (file.exists()) {
                     prices = parsePriceJson(priceJsonPath)
-                } else if (!hasLoggedPricingWarning) {
-                    log.warn("Pricing JSON file not found at: ${priceJsonPath}. Cost estimation will default to 0.0.")
-                    hasLoggedPricingWarning = true
+                } else {
+                    synchronized(this) {
+                        if (!hasLoggedPricingWarning) {
+                            log.warn("Pricing JSON file not found at: ${priceJsonPath}. Cost estimation will default to 0.0.")
+                            hasLoggedPricingWarning = true
+                        }
+                    }
                 }
             } catch (Exception e) {
+                synchronized(this) {
+                    if (!hasLoggedPricingWarning) {
+                        log.warn("Failed to parse pricing JSON: ${e.message}")
+                        hasLoggedPricingWarning = true
+                    }
+                }
+            }
+        } else {
+            synchronized(this) {
                 if (!hasLoggedPricingWarning) {
-                    log.warn("Failed to parse pricing JSON: ${e.message}")
+                    log.info("No pricing API or JSON path configured. Cost estimation will default to 0.0.")
                     hasLoggedPricingWarning = true
                 }
             }
-        } else if (!hasLoggedPricingWarning) {
-            log.info("No pricing API or JSON path configured. Cost estimation will default to 0.0.")
-            hasLoggedPricingWarning = true
         }
 
         def kCPUHr = (prices.kCPUHr != null ? prices.kCPUHr : costConfig.kCPUHr ?: 0.0) as double
@@ -145,9 +157,11 @@ class TaskStatusReport extends BaseReport {
         def memGbRate = kGBHr / 1000.0
         def gpuGbRate = kGPUGBHr / 1000.0
 
-        if (!hasLoggedPricingRates) {
-            log.info("Pricing rates loaded: currency=${prices.currency ?: costConfig.currency ?: 'EUR'}, kCPUHr=${kCPUHr}, kGBHr=${kGBHr}, kGPUGBHr=${kGPUGBHr}, TBMonth=${tbMonthRate}")
-            hasLoggedPricingRates = true
+        synchronized(this) {
+            if (!hasLoggedPricingRates) {
+                log.info("Pricing rates loaded: currency=${prices.currency ?: costConfig.currency ?: 'EUR'}, kCPUHr=${kCPUHr}, kGBHr=${kGBHr}, kGPUGBHr=${kGPUGBHr}, TBMonth=${tbMonthRate}")
+                hasLoggedPricingRates = true
+            }
         }
 
         def keys = trace.keySet()
