@@ -32,6 +32,7 @@ class TaskStatusReport extends BaseReport {
 
     private List<Map> tasks = []
     private boolean hasLoggedPricingWarning = false
+    private boolean hasLoggedPricingRates = false
 
     TaskStatusReport() {
         super('task-status-report')
@@ -143,6 +144,11 @@ class TaskStatusReport extends BaseReport {
         def cpuRate = kCPUHr / 1000.0
         def memGbRate = kGBHr / 1000.0
         def gpuGbRate = kGPUGBHr / 1000.0
+
+        if (!hasLoggedPricingRates) {
+            log.info("Pricing rates loaded: currency=${prices.currency ?: costConfig.currency ?: 'EUR'}, kCPUHr=${kCPUHr}, kGBHr=${kGBHr}, kGPUGBHr=${kGPUGBHr}, TBMonth=${tbMonthRate}")
+            hasLoggedPricingRates = true
+        }
 
         def keys = trace.keySet()
         def cpus = (keys.contains('cpus') ? trace.get('cpus') ?: 1 : 1) as int
