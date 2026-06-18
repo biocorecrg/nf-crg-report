@@ -1,6 +1,6 @@
 {
     "report_type": "task-status-report",
-    "generated_at": "2026-05-14T16:09:11.77580135Z",
+    "generated_at": "2026-06-18T12:53:55.302121+02:00",
     "summary": {
         "total_tasks": 2,
         "completed": 1,
@@ -8,7 +8,10 @@
         "failed": 0,
         "aborted": 0,
         "retried": 0,
-        "failure_ignored": 1
+        "failure_ignored": 1,
+        "total_compute_cost": "\u20ac0.0000",
+        "projected_monthly_storage_cost": "\u20ac0.0000",
+        "total_estimated_cost": "\u20ac0.0000"
     },
     "tasks_by_status": {
         "COMPLETED": [
@@ -20,9 +23,18 @@
                 "tag": "sample1",
                 "status": "COMPLETED",
                 "exit_status": null,
-                "submit_time": "1970-01-01T00:00:00Z",
-                "start_time": "1970-01-01T00:00:00Z",
-                "complete_time": "1970-01-01T00:00:00Z",
+                "compute_cost": "\u20ac0.0000",
+                "projected_monthly_storage_cost": "\u20ac0.0000",
+                "total_estimated_cost": "\u20ac0.0000",
+                "raw_compute_cost": 0.0,
+                "raw_storage_cost": 0.0,
+                "allocated_cpus": 1,
+                "allocated_mem_gb": "0.00 GB",
+                "allocated_gpus": 0,
+                "output_size": "0.0000 GB",
+                "submit_time": "1970-01-01T01:00:00+01:00",
+                "start_time": "1970-01-01T01:00:00+01:00",
+                "complete_time": "1970-01-01T01:00:00+01:00",
                 "duration_ms": 0,
                 "realtime_ms": 0,
                 "attempt": 1,
@@ -38,21 +50,21 @@
                 "scratch": null,
                 "container": null,
                 "outputs": [
-
+                    
                 ]
             }
         ],
         "CACHED": [
-
+            
         ],
         "FAILED": [
-
+            
         ],
         "ABORTED": [
-
+            
         ],
         "RETRIED": [
-
+            
         ],
         "IGNORED": [
             {
@@ -63,9 +75,18 @@
                 "tag": "sample1",
                 "status": "FAILED",
                 "exit_status": null,
-                "submit_time": "1970-01-01T00:00:00Z",
-                "start_time": "1970-01-01T00:00:00Z",
-                "complete_time": "1970-01-01T00:00:00Z",
+                "compute_cost": "\u20ac0.0000",
+                "projected_monthly_storage_cost": "\u20ac0.0000",
+                "total_estimated_cost": "\u20ac0.0000",
+                "raw_compute_cost": 0.0,
+                "raw_storage_cost": 0.0,
+                "allocated_cpus": 1,
+                "allocated_mem_gb": "0.00 GB",
+                "allocated_gpus": 0,
+                "output_size": "0.0000 GB",
+                "submit_time": "1970-01-01T01:00:00+01:00",
+                "start_time": "1970-01-01T01:00:00+01:00",
+                "complete_time": "1970-01-01T01:00:00+01:00",
                 "duration_ms": 0,
                 "realtime_ms": 0,
                 "attempt": 1,
@@ -81,7 +102,7 @@
                 "scratch": null,
                 "container": null,
                 "outputs": [
-
+                    
                 ]
             }
         ]

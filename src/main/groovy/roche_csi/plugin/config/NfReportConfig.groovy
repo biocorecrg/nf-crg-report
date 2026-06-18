@@ -47,6 +47,10 @@ class NfReportConfig implements ConfigScope {
     @Description('Email notification configuration')
     EmailConfig email
 
+    @ConfigOption
+    @Description('Custom costs configuration')
+    Map costs = [:]
+
     NfReportConfig() { }
 
     NfReportConfig(Map config) {
@@ -94,6 +98,14 @@ class NfReportConfig implements ConfigScope {
                 this.createLinkToLatestReport = config.createLinkToLatestReport
             } else {
                 log.warn("Invalid value for 'nfreport.createLinkToLatestReport', expected a Boolean. Using default: ${this.createLinkToLatestReport}")
+            }
+        }
+
+        if (config.containsKey('costs')) {
+            if (config.costs in Map) {
+                this.costs = config.costs
+            } else {
+                log.warn("Invalid value for 'nfreport.costs', expected a Map. Using default: ${this.costs}")
             }
         }
 

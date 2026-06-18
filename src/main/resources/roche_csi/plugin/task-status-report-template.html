@@ -51,6 +51,11 @@
         <li>Completed: ${summary.completed}</li>
         <li>Cached: ${summary.cached}</li>
         <li>Failed: ${summary.failed}</li>
+        <% if (summary.total_estimated_cost) { %>
+        <li>Total Compute Cost: ${summary.total_compute_cost}</li>
+        <li>Projected Monthly Storage Cost: ${summary.projected_monthly_storage_cost}</li>
+        <li>Total Estimated Cost (Compute + Storage): ${summary.total_estimated_cost}</li>
+        <% } %>
     </ul>
 
     <h2>Tasks by Status</h2>

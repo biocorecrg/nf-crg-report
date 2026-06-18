@@ -1,17 +1,17 @@
 {
     "report_type": "sample-status-report",
-    "generated_at": "2026-05-14T16:09:11.307588736Z",
+    "generated_at": "2026-06-18T12:53:55.184469+02:00",
     "summary": {
         "total_samples": 3,
-        "completed": 1,
+        "completed": 3,
         "pending": 0,
-        "partially_completed": 1,
-        "failed": 1
+        "partially_completed": 0,
+        "failed": 0
     },
     "samples_by_status": {
         "COMPLETED": [
             {
-                "sample_id": "sampleC",
+                "sample_id": "charlie",
                 "status": "COMPLETED",
                 "tasks": [
                     {
@@ -19,9 +19,9 @@
                         "process_name": "Test",
                         "task_name": "task1",
                         "status": "COMPLETED",
-                        "submit_time": "1970-01-01T00:00:00Z",
-                        "start_time": "1970-01-01T00:00:00Z",
-                        "complete_time": "1970-01-01T00:00:00Z",
+                        "submit_time": "1970-01-01T01:00:00+01:00",
+                        "start_time": "1970-01-01T01:00:00+01:00",
+                        "complete_time": "1970-01-01T01:00:00+01:00",
                         "duration_ms": 0,
                         "realtime_ms": 0,
                         "exit_status": null,
@@ -38,40 +38,109 @@
                         "scratch": null,
                         "container": null,
                         "outputs": [
-
-                        ]
-                    },
-                    {
-                        "task_id": null,
-                        "process_name": "Test",
-                        "task_name": "task2",
-                        "status": "COMPLETED",
-                        "submit_time": "1970-01-01T00:00:00Z",
-                        "start_time": "1970-01-01T00:00:00Z",
-                        "complete_time": "1970-01-01T00:00:00Z",
-                        "duration_ms": 0,
-                        "realtime_ms": 0,
-                        "exit_status": null,
-                        "attempt": 1,
-                        "rchar": null,
-                        "wchar": null,
-                        "pct_cpu": null,
-                        "peak_rss": null,
-                        "peak_vmem": null,
-                        "workdir": null,
-                        "log": null,
-                        "out": null,
-                        "err": null,
-                        "scratch": null,
-                        "container": null,
-                        "outputs": [
-
+                            
                         ]
                     }
                 ],
                 "task_counts": {
-                    "total": 2,
-                    "completed": 2,
+                    "total": 1,
+                    "completed": 1,
+                    "cached": 0,
+                    "failed": 0,
+                    "aborted": 0,
+                    "failure_retried": 0,
+                    "failure_ignored": 0
+                },
+                "first_task_start": null,
+                "last_task_complete": null,
+                "total_duration_ms": 0,
+                "processes": [
+                    "Test"
+                ]
+            },
+            {
+                "sample_id": "alpha",
+                "status": "COMPLETED",
+                "tasks": [
+                    {
+                        "task_id": null,
+                        "process_name": "Test",
+                        "task_name": "task1",
+                        "status": "COMPLETED",
+                        "submit_time": "1970-01-01T01:00:00+01:00",
+                        "start_time": "1970-01-01T01:00:00+01:00",
+                        "complete_time": "1970-01-01T01:00:00+01:00",
+                        "duration_ms": 0,
+                        "realtime_ms": 0,
+                        "exit_status": null,
+                        "attempt": 1,
+                        "rchar": null,
+                        "wchar": null,
+                        "pct_cpu": null,
+                        "peak_rss": null,
+                        "peak_vmem": null,
+                        "workdir": null,
+                        "log": null,
+                        "out": null,
+                        "err": null,
+                        "scratch": null,
+                        "container": null,
+                        "outputs": [
+                            
+                        ]
+                    }
+                ],
+                "task_counts": {
+                    "total": 1,
+                    "completed": 1,
+                    "cached": 0,
+                    "failed": 0,
+                    "aborted": 0,
+                    "failure_retried": 0,
+                    "failure_ignored": 0
+                },
+                "first_task_start": null,
+                "last_task_complete": null,
+                "total_duration_ms": 0,
+                "processes": [
+                    "Test"
+                ]
+            },
+            {
+                "sample_id": "bravo",
+                "status": "COMPLETED",
+                "tasks": [
+                    {
+                        "task_id": null,
+                        "process_name": "Test",
+                        "task_name": "task1",
+                        "status": "COMPLETED",
+                        "submit_time": "1970-01-01T01:00:00+01:00",
+                        "start_time": "1970-01-01T01:00:00+01:00",
+                        "complete_time": "1970-01-01T01:00:00+01:00",
+                        "duration_ms": 0,
+                        "realtime_ms": 0,
+                        "exit_status": null,
+                        "attempt": 1,
+                        "rchar": null,
+                        "wchar": null,
+                        "pct_cpu": null,
+                        "peak_rss": null,
+                        "peak_vmem": null,
+                        "workdir": null,
+                        "log": null,
+                        "out": null,
+                        "err": null,
+                        "scratch": null,
+                        "container": null,
+                        "outputs": [
+                            
+                        ]
+                    }
+                ],
+                "task_counts": {
+                    "total": 1,
+                    "completed": 1,
                     "cached": 0,
                     "failed": 0,
                     "aborted": 0,
@@ -87,161 +156,13 @@
             }
         ],
         "PENDING": [
-
+            
         ],
         "PARTIALLY_COMPLETED": [
-            {
-                "sample_id": "sampleB",
-                "status": "PARTIALLY_COMPLETED",
-                "tasks": [
-                    {
-                        "task_id": null,
-                        "process_name": "Test",
-                        "task_name": "task1",
-                        "status": "COMPLETED",
-                        "submit_time": "1970-01-01T00:00:00Z",
-                        "start_time": "1970-01-01T00:00:00Z",
-                        "complete_time": "1970-01-01T00:00:00Z",
-                        "duration_ms": 0,
-                        "realtime_ms": 0,
-                        "exit_status": null,
-                        "attempt": 1,
-                        "rchar": null,
-                        "wchar": null,
-                        "pct_cpu": null,
-                        "peak_rss": null,
-                        "peak_vmem": null,
-                        "workdir": null,
-                        "log": null,
-                        "out": null,
-                        "err": null,
-                        "scratch": null,
-                        "container": null,
-                        "outputs": [
-
-                        ]
-                    },
-                    {
-                        "task_id": null,
-                        "process_name": "Test",
-                        "task_name": "task2",
-                        "status": "IGNORED",
-                        "submit_time": "1970-01-01T00:00:00Z",
-                        "start_time": "1970-01-01T00:00:00Z",
-                        "complete_time": "1970-01-01T00:00:00Z",
-                        "duration_ms": 0,
-                        "realtime_ms": 0,
-                        "exit_status": null,
-                        "attempt": 1,
-                        "rchar": null,
-                        "wchar": null,
-                        "pct_cpu": null,
-                        "peak_rss": null,
-                        "peak_vmem": null,
-                        "workdir": null,
-                        "log": null,
-                        "out": null,
-                        "err": null,
-                        "scratch": null,
-                        "container": null,
-                        "outputs": [
-
-                        ]
-                    }
-                ],
-                "task_counts": {
-                    "total": 2,
-                    "completed": 1,
-                    "cached": 0,
-                    "failed": 0,
-                    "aborted": 0,
-                    "failure_retried": 0,
-                    "failure_ignored": 1
-                },
-                "first_task_start": null,
-                "last_task_complete": null,
-                "total_duration_ms": 0,
-                "processes": [
-                    "Test"
-                ]
-            }
+            
         ],
         "FAILED": [
-            {
-                "sample_id": "sampleA",
-                "status": "FAILED",
-                "tasks": [
-                    {
-                        "task_id": null,
-                        "process_name": "Test",
-                        "task_name": "task1",
-                        "status": "IGNORED",
-                        "submit_time": "1970-01-01T00:00:00Z",
-                        "start_time": "1970-01-01T00:00:00Z",
-                        "complete_time": "1970-01-01T00:00:00Z",
-                        "duration_ms": 0,
-                        "realtime_ms": 0,
-                        "exit_status": null,
-                        "attempt": 1,
-                        "rchar": null,
-                        "wchar": null,
-                        "pct_cpu": null,
-                        "peak_rss": null,
-                        "peak_vmem": null,
-                        "workdir": null,
-                        "log": null,
-                        "out": null,
-                        "err": null,
-                        "scratch": null,
-                        "container": null,
-                        "outputs": [
-
-                        ]
-                    },
-                    {
-                        "task_id": null,
-                        "process_name": "Test",
-                        "task_name": "task2",
-                        "status": "IGNORED",
-                        "submit_time": "1970-01-01T00:00:00Z",
-                        "start_time": "1970-01-01T00:00:00Z",
-                        "complete_time": "1970-01-01T00:00:00Z",
-                        "duration_ms": 0,
-                        "realtime_ms": 0,
-                        "exit_status": null,
-                        "attempt": 1,
-                        "rchar": null,
-                        "wchar": null,
-                        "pct_cpu": null,
-                        "peak_rss": null,
-                        "peak_vmem": null,
-                        "workdir": null,
-                        "log": null,
-                        "out": null,
-                        "err": null,
-                        "scratch": null,
-                        "container": null,
-                        "outputs": [
-
-                        ]
-                    }
-                ],
-                "task_counts": {
-                    "total": 2,
-                    "completed": 0,
-                    "cached": 0,
-                    "failed": 0,
-                    "aborted": 0,
-                    "failure_retried": 0,
-                    "failure_ignored": 2
-                },
-                "first_task_start": null,
-                "last_task_complete": null,
-                "total_duration_ms": 0,
-                "processes": [
-                    "Test"
-                ]
-            }
+            
         ]
     }
 }

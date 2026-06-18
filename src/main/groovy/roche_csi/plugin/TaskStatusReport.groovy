@@ -31,6 +31,7 @@ class TaskStatusReport extends BaseReport {
     ]
 
     private List<Map> tasks = []
+    private boolean hasLoggedPricingWarning = false
 
     TaskStatusReport() {
         super('task-status-report')
@@ -99,6 +100,70 @@ class TaskStatusReport extends BaseReport {
     }
 
     private Map createTaskData(TaskHandler handler, TraceRecord trace, String status) {
+        def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
+        def priceJsonPath = costConfig.priceJsonPath ?: null
+
+        def prices = [:]
+        if (priceJsonPath) {
+            try {
+                def file = new File(priceJsonPath)
+                if (file.exists()) {
+                    prices = parsePriceJson(priceJsonPath)
+                } else if (!hasLoggedPricingWarning) {
+                    log.warn("Pricing JSON file not found at: ${priceJsonPath}. Cost estimation will default to 0.0.")
+                    hasLoggedPricingWarning = true
+                }
+            } catch (Exception e) {
+                if (!hasLoggedPricingWarning) {
+                    log.warn("Failed to parse pricing JSON: ${e.message}")
+                    hasLoggedPricingWarning = true
+                }
+            }
+        } else if (!hasLoggedPricingWarning) {
+            log.info("No pricing JSON path configured. Cost estimation will default to 0.0.")
+            hasLoggedPricingWarning = true
+        }
+
+        def kCPUHr = (prices.kCPUHr != null ? prices.kCPUHr : costConfig.kCPUHr ?: 0.0) as double
+        def kGBHr = (prices.kGBHr != null ? prices.kGBHr : costConfig.kGBHr ?: 0.0) as double
+        def kGPUGBHr = (prices.kGPUGBHr != null ? prices.kGPUGBHr : costConfig.kGPUGBHr ?: 0.0) as double
+        def tbMonthRate = (prices.TBMonth != null ? prices.TBMonth : costConfig.TBMonth ?: 0.0) as double
+        def defaultGpuMemGb = (costConfig.defaultGpuMemGb ?: 16) as double
+
+        def cpuRate = kCPUHr / 1000.0
+        def memGbRate = kGBHr / 1000.0
+        def gpuGbRate = kGPUGBHr / 1000.0
+
+        def keys = trace.keySet()
+        def cpus = (keys.contains('cpus') ? trace.get('cpus') ?: 1 : 1) as int
+        def memoryBytes = (keys.contains('memory') ? trace.get('memory') ?: 0 : 0) as long
+        def memoryGb = memoryBytes / (1024.0 * 1024.0 * 1024.0)
+        def gpus = (keys.contains('accelerator') ? trace.get('accelerator') ?: 0 : 0) as int
+
+        def realtimeMs = (keys.contains('realtime') ? trace.get('realtime') ?: 0 : 0) as long
+        def hours = realtimeMs / (1000.0 * 60.0 * 60.0)
+
+        def cpuCost = cpus * hours * cpuRate
+        def memCost = memoryGb * hours * memGbRate
+        def gpuCost = gpus * defaultGpuMemGb * hours * gpuGbRate
+        def totalComputeCost = cpuCost + memCost + gpuCost
+
+        def outputPaths = getOutputs(handler)
+        long totalOutputSizeBytes = 0
+        outputPaths.each { pathStr ->
+            try {
+                def path = java.nio.file.Paths.get(pathStr)
+                if (java.nio.file.Files.exists(path) && java.nio.file.Files.isRegularFile(path)) {
+                    totalOutputSizeBytes += java.nio.file.Files.size(path)
+                }
+            } catch (Exception e) {
+                // Ignore paths that cannot be accessed or resolved
+            }
+        }
+        def outputTb = totalOutputSizeBytes / (1024.0 * 1024.0 * 1024.0 * 1024.0)
+        def monthlyStorageCost = outputTb * tbMonthRate
+        def totalEstimatedCost = totalComputeCost + monthlyStorageCost
+
         def submit_time = Instant.ofEpochMilli((trace.get('submit') ?: 0) as Long)
             .atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
@@ -108,14 +173,24 @@ class TaskStatusReport extends BaseReport {
         def complete_time = Instant.ofEpochMilli((trace.get('complete') ?: 0) as Long)
             .atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-        return [
-            task_id: trace.get('task_id')?.toString(),
-            hash: trace.get('hash')?.toString(),
-            process_name: handler.task.processor.name,
-            task_name: handler.task.name,
-            tag: handler.task.config.tag?.toString(),
-            status: trace.get('status')?.toString() ?: status,
-            exit_status: trace.get('exit'),
+            def symbol = getCurrencySymbol()
+            return [
+                task_id: trace.get('task_id')?.toString(),
+                hash: trace.get('hash')?.toString(),
+                process_name: handler.task.processor.name,
+                task_name: handler.task.name,
+                tag: handler.task.config.tag?.toString(),
+                status: trace.get('status')?.toString() ?: status,
+                exit_status: trace.get('exit'),
+                compute_cost: "${symbol}${String.format('%.4f', totalComputeCost)}",
+                projected_monthly_storage_cost: "${symbol}${String.format('%.4f', monthlyStorageCost)}",
+                total_estimated_cost: "${symbol}${String.format('%.4f', totalEstimatedCost)}",
+            raw_compute_cost: totalComputeCost,
+            raw_storage_cost: monthlyStorageCost,
+            allocated_cpus: cpus,
+            allocated_mem_gb: String.format('%.2f GB', memoryGb),
+            allocated_gpus: gpus,
+            output_size: String.format('%.4f GB', totalOutputSizeBytes / (1024.0 * 1024.0 * 1024.0)),
             submit_time: submit_time,
             start_time: start_time,
             complete_time: complete_time,
@@ -152,6 +227,15 @@ class TaskStatusReport extends BaseReport {
     Map toMap() {
         def map = super.toMap()
         synchronized(tasksByStatus) {
+            double totalCompute = 0.0
+            double totalStorage = 0.0
+            synchronized(tasks) {
+                tasks.each { task ->
+                    totalCompute += (task.raw_compute_cost ?: 0.0) as double
+                    totalStorage += (task.raw_storage_cost ?: 0.0) as double
+                }
+            }
+            def symbol = getCurrencySymbol()
             map << [
                 summary: [
                     total_tasks: tasksByStatus.values().flatten().size(),
@@ -160,7 +244,10 @@ class TaskStatusReport extends BaseReport {
                     failed: tasksByStatus['FAILED'].size(),
                     aborted: tasksByStatus['ABORTED'].size(),
                     retried: tasksByStatus['RETRIED'].size(),
-                    failure_ignored: tasksByStatus['IGNORED'].size()
+                    failure_ignored: tasksByStatus['IGNORED'].size(),
+                    total_compute_cost: "${symbol}${String.format('%.4f', totalCompute)}",
+                    projected_monthly_storage_cost: "${symbol}${String.format('%.4f', totalStorage)}",
+                    total_estimated_cost: "${symbol}${String.format('%.4f', totalCompute + totalStorage)}"
                 ],
                 tasks_by_status: tasksByStatus
             ]
@@ -215,6 +302,42 @@ class TaskStatusReport extends BaseReport {
                 writeTsvReport()
             }
         }
+    }
+
+    String getCurrencySymbol() {
+        def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
+        def currency = costConfig.currency ?: 'EUR'
+
+        def priceJsonPath = costConfig.priceJsonPath ?: null
+        if (priceJsonPath) {
+            try {
+                def file = new File(priceJsonPath)
+                if (file.exists()) {
+                    def prices = parsePriceJson(priceJsonPath)
+                    if (prices.currency) {
+                        currency = prices.currency
+                    }
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
+        switch (currency.toString().toUpperCase()) {
+            case 'EUR': return '€'
+            case 'USD': return '$'
+            case 'GBP': return '£'
+            default: return "${currency} "
+        }
+    }
+
+    private Map parsePriceJson(String path) {
+        if (!path) return [:]
+        def file = new File(path)
+        if (!file.exists()) return [:]
+        def text = file.text
+        def cleanText = text.replaceAll(/(?m)\/\/.*$/, "").replaceAll(/(?m)#.*$/, "")
+        return new groovy.json.JsonSlurper().parseText(cleanText) as Map
     }
 
 }
