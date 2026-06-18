@@ -135,6 +135,38 @@ The following options are used to configure email notification.
 
 The email notification uses the same email system as Nextflow. See https://nextflow.io/docs/latest/notifications.html#mail-configuration for details on how to configure email settings such as SMTP server and port.
 
+### Cost and pricing options
+
+The `nf-report` plugin can estimate the execution costs (compute and storage) for tasks and provide an aggregated sum at the pipeline level in the Task Status Report. This is configured under the `costs` scope inside `nfreport`.
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `costs.priceJsonPath` | Path to the JSON file containing pricing configuration rates | |
+| `costs.currency` | Default currency code (e.g., `'EUR'`, `'USD'`, `'GBP'`). Supported symbols: `€`, `$`, `£`. | `'EUR'` |
+| `costs.defaultGpuMemGb` | Default GPU memory in GB to assume per allocated GPU (accelerator) | `16` |
+| `costs.kCPUHr` | Default cost of 1,000 CPU hours | `0.0` |
+| `costs.kGBHr` | Default cost of 1,000 GB RAM hours | `0.0` |
+| `costs.kGPUGBHr` | Default cost of 1,000 GB GPU memory hours | `0.0` |
+| `costs.TBMonth` | Default cost of 1 TB storage per month | `0.0` |
+
+#### Pricing JSON Format
+
+You can configure pricing details dynamically using a JSON file. The plugin supports comments (starting with `#` or `//`) in this file for ease of documentation.
+
+Example `prices.json`:
+```json
+{
+  "currency": "EUR",
+  "kCPUHr": 9.69,       # cost of 1000 hours for 1 CPU
+  "kGBHr": 1.08,        # cost of 1000 hours for 1 GB of RAM
+  "kGPUGBHr": 11.63,    # cost of 1000 hours for 1 GB of GPU memory
+  "TBMonth": 3.3        # cost of 1 TB storage for 1 month
+}
+```
+
+If a pricing JSON file is specified but cannot be found or parsed, the plugin logs a warning and defaults to using options defined in `nextflow.config` (or fallback values of `0.0`).
+
+
 ### Full configuration example
 
 ```groovy
@@ -142,6 +174,13 @@ nfreport {
     outputDir = './reports'
     prefix = 'myworkflow-'
     createLinkToLatestReport = true
+
+    // Cost and pricing configuration
+    costs {
+        priceJsonPath = './prices.json'
+        defaultGpuMemGb = 16
+        currency = 'EUR'
+    }
 
     // Execution report configuration
     executionReport {
