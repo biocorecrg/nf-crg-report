@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 /*
- * Validation pipeline for nf-report plugin
+ * Validation pipeline for nf-crg-report plugin
  */
 
 process TEST_PROCESS_1 {

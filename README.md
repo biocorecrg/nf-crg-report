@@ -1,10 +1,10 @@
-# nf-report Plugin
+# nf-crg-report Plugin
 
 A comprehensive reporting plugin for Nextflow that generates various reports during workflow execution.
 
 ## Summary
 
-The nf-report plugin provides multiple configurable report types:
+The nf-crg-report plugin provides multiple configurable report types:
 
 - **Execution Report**: Provides a detailed overview of the workflow execution, including start/end times, parameters, and metadata.
 - **Task Status Report**: Summarizes task execution details grouped by status (e.g., COMPLETED, FAILED, CACHED, RETRIED, ABORTED, IGNORED).
@@ -18,7 +18,7 @@ Add the plugin to your Nextflow configuration:
 
 ```groovy
 plugins {
-    id 'nf-report'
+    id 'nf-crg-report'
 }
 ```
 
@@ -137,11 +137,12 @@ The email notification uses the same email system as Nextflow. See https://nextf
 
 ### Cost and pricing options
 
-The `nf-report` plugin can estimate the execution costs (compute and storage) for tasks and provide an aggregated sum at the pipeline level in the Task Status Report. This is configured under the `costs` scope inside `nfreport`.
+The `nf-crg-report` plugin can estimate the execution costs (compute and storage) for tasks and provide an aggregated sum at the pipeline level in the Task Status Report. This is configured under the `costs` scope inside `nfreport`.
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `costs.priceJsonPath` | Path to the JSON file containing pricing configuration rates | |
+| `costs.priceAPI` | URL API endpoint (e.g., `https://sit.crg.es/fees`) to dynamically fetch pricing JSON | |
+| `costs.priceJsonPath` | Path to the JSON file containing pricing configuration rates (alternative to `costs.priceAPI`) | |
 | `costs.currency` | Default currency code (e.g., `'EUR'`, `'USD'`, `'GBP'`). Supported symbols: `€`, `$`, `£`. | `'EUR'` |
 | `costs.defaultGpuMemGb` | Default GPU memory in GB to assume per allocated GPU (accelerator) | `16` |
 | `costs.kCPUHr` | Default cost of 1,000 CPU hours | `0.0` |
@@ -164,7 +165,7 @@ Example `prices.json`:
 }
 ```
 
-If a pricing JSON file is specified but cannot be found or parsed, the plugin logs a warning and defaults to using options defined in `nextflow.config` (or fallback values of `0.0`).
+If a pricing JSON file or API endpoint is specified but cannot be found, fetched, or parsed, the plugin logs a warning and defaults to using options defined in `nextflow.config` (or fallback values of `0.0`).
 
 
 ### Full configuration example
@@ -177,7 +178,7 @@ nfreport {
 
     // Cost and pricing configuration
     costs {
-        priceJsonPath = './prices.json'
+        priceAPI = 'https://sit.crg.es/fees' // Alternative: priceJsonPath = './prices.json'
         defaultGpuMemGb = 16
         currency = 'EUR'
     }
@@ -220,7 +221,7 @@ The plugin supports multiple output formats for reports, including:
 
 ### Creating custom HTML and email templates
 
-nf-report uses `GStringTemplateEngine` to render HTML reports and email notification from templates. The default template files can be found under `src/main/resources/roche_csi/plugin`. The variable names used in the templates are based on the report schema. The report schema defines the structure and content of the data that will be included in the reports and notifications. We provide the schema files for each report type as [JSON Schema](https://json-schema.org/) in the `examples` directory so advanced users can create and use their own templates.
+nf-crg-report uses `GStringTemplateEngine` to render HTML reports and email notification from templates. The default template files can be found under `src/main/resources/roche_csi/plugin`. The variable names used in the templates are based on the report schema. The report schema defines the structure and content of the data that will be included in the reports and notifications. We provide the schema files for each report type as [JSON Schema](https://json-schema.org/) in the `examples` directory so advanced users can create and use their own templates.
 
 Note: If a field is filtered out by the report configuration (`fields` option), it will not be available when rendering the templates.
 
@@ -236,4 +237,4 @@ make assemble
 The plugin can be tested without a local Nextflow installation:
 
 1. Build and install the plugin to your local Nextflow installation: `make install`
-2. Run a pipeline with the plugin: `nextflow run hello -plugins nf-report@1.1.0`
+2. Run a pipeline with the plugin: `nextflow run hello -plugins nf-crg-report@1.1.1`

@@ -102,9 +102,19 @@ class TaskStatusReport extends BaseReport {
     private Map createTaskData(TaskHandler handler, TraceRecord trace, String status) {
         def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
         def priceJsonPath = costConfig.priceJsonPath ?: null
+        def priceAPI = costConfig.priceAPI ?: null
 
         def prices = [:]
-        if (priceJsonPath) {
+        if (priceAPI) {
+            try {
+                prices = fetchPriceAPI(priceAPI)
+            } catch (Exception e) {
+                if (!hasLoggedPricingWarning) {
+                    log.warn("Failed to fetch or parse pricing API at ${priceAPI}: ${e.message}. Cost estimation will default to 0.0.")
+                    hasLoggedPricingWarning = true
+                }
+            }
+        } else if (priceJsonPath) {
             try {
                 def file = new File(priceJsonPath)
                 if (file.exists()) {
@@ -120,7 +130,7 @@ class TaskStatusReport extends BaseReport {
                 }
             }
         } else if (!hasLoggedPricingWarning) {
-            log.info("No pricing JSON path configured. Cost estimation will default to 0.0.")
+            log.info("No pricing API or JSON path configured. Cost estimation will default to 0.0.")
             hasLoggedPricingWarning = true
         }
 
@@ -308,19 +318,25 @@ class TaskStatusReport extends BaseReport {
         def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
         def currency = costConfig.currency ?: 'EUR'
 
+        def priceAPI = costConfig.priceAPI ?: null
         def priceJsonPath = costConfig.priceJsonPath ?: null
-        if (priceJsonPath) {
+        def prices = [:]
+        if (priceAPI) {
             try {
-                def file = new File(priceJsonPath)
-                if (file.exists()) {
-                    def prices = parsePriceJson(priceJsonPath)
-                    if (prices.currency) {
-                        currency = prices.currency
-                    }
-                }
+                prices = fetchPriceAPI(priceAPI)
             } catch (Exception e) {
                 // ignore
             }
+        } else if (priceJsonPath) {
+            try {
+                prices = parsePriceJson(priceJsonPath)
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
+        if (prices?.currency) {
+            currency = prices.currency
         }
 
         switch (currency.toString().toUpperCase()) {
@@ -336,6 +352,16 @@ class TaskStatusReport extends BaseReport {
         def file = new File(path)
         if (!file.exists()) return [:]
         def text = file.text
+        def cleanText = text.replaceAll(/(?m)\/\/.*$/, "").replaceAll(/(?m)#.*$/, "")
+        return new groovy.json.JsonSlurper().parseText(cleanText) as Map
+    }
+
+    private Map fetchPriceAPI(String urlStr) {
+        if (!urlStr) return [:]
+        def conn = new URL(urlStr).openConnection()
+        conn.setConnectTimeout(5000)
+        conn.setReadTimeout(5000)
+        def text = conn.getInputStream().getText("UTF-8")
         def cleanText = text.replaceAll(/(?m)\/\/.*$/, "").replaceAll(/(?m)#.*$/, "")
         return new groovy.json.JsonSlurper().parseText(cleanText) as Map
     }

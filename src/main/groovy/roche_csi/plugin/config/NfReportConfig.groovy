@@ -8,7 +8,7 @@ import nextflow.config.spec.ScopeName
 
 @Slf4j
 @ScopeName('nfreport')
-@Description('Configuration for the nf-report plugin')
+@Description('Configuration for the nf-crg-report plugin')
 class NfReportConfig implements ConfigScope {
 
     @ConfigOption
