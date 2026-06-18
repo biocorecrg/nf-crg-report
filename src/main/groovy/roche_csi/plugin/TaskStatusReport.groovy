@@ -109,10 +109,18 @@ class TaskStatusReport extends BaseReport {
         if (priceAPI) {
             try {
                 prices = fetchPriceAPI(priceAPI)
+                if (prices == null || prices.isEmpty()) {
+                    synchronized(this) {
+                        if (!hasLoggedPricingWarning) {
+                            log.warn("Pricing API at ${priceAPI} returned an empty response. Cost estimation will default to configured/default rates.")
+                            hasLoggedPricingWarning = true
+                        }
+                    }
+                }
             } catch (Exception e) {
                 synchronized(this) {
                     if (!hasLoggedPricingWarning) {
-                        log.warn("Failed to fetch or parse pricing API at ${priceAPI}: ${e.message}. Cost estimation will default to 0.0.")
+                        log.warn("Pricing API at ${priceAPI} is not working or does not exist: ${e.message}. Cost estimation will default to configured/default rates.")
                         hasLoggedPricingWarning = true
                     }
                 }
@@ -122,6 +130,14 @@ class TaskStatusReport extends BaseReport {
                 def file = new File(priceJsonPath)
                 if (file.exists()) {
                     prices = parsePriceJson(priceJsonPath)
+                    if (prices == null || prices.isEmpty()) {
+                        synchronized(this) {
+                            if (!hasLoggedPricingWarning) {
+                                log.warn("Pricing JSON at ${priceJsonPath} is empty. Cost estimation will default to configured/default rates.")
+                                hasLoggedPricingWarning = true
+                            }
+                        }
+                    }
                 } else {
                     synchronized(this) {
                         if (!hasLoggedPricingWarning) {
