@@ -60,6 +60,17 @@
         <li>Projected Monthly Storage Cost: ${summary.projected_monthly_storage_cost}</li>
         <li>Total Estimated Cost (Compute + Storage): ${summary.total_estimated_cost}</li>
         <% } %>
+        <% if (summary.pricing_rates) { %>
+        <li>Pricing Rates:
+            <ul>
+                <li>Currency: ${summary.pricing_rates.currency}</li>
+                <li>kCPUHr: ${summary.pricing_rates.kCPUHr}</li>
+                <li>kGBHr: ${summary.pricing_rates.kGBHr}</li>
+                <li>kGPUGBHr: ${summary.pricing_rates.kGPUGBHr}</li>
+                <li>TBMonth: ${summary.pricing_rates.TBMonth}</li>
+            </ul>
+        </li>
+        <% } %>
     </ul>
 
     <h2>Tasks by Status</h2>

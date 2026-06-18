@@ -282,8 +282,24 @@ class TaskStatusReport extends BaseReport {
                 }
             }
             def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
-            def launchFile = costConfig.launchFile ?: null
 
+            // Read pricing to get rates
+            def priceJsonPath = costConfig.priceJsonPath ?: null
+            def priceAPI = costConfig.priceAPI ?: null
+            def prices = [:]
+            if (priceAPI) {
+                try { prices = fetchPriceAPI(priceAPI) } catch (Exception e) {}
+            } else if (priceJsonPath) {
+                try { prices = parsePriceJson(priceJsonPath) } catch (Exception e) {}
+            }
+
+            def kCPUHr = (prices.kCPUHr != null ? prices.kCPUHr : costConfig.kCPUHr ?: 0.0) as double
+            def kGBHr = (prices.kGBHr != null ? prices.kGBHr : costConfig.kGBHr ?: 0.0) as double
+            def kGPUGBHr = (prices.kGPUGBHr != null ? prices.kGPUGBHr : costConfig.kGPUGBHr ?: 0.0) as double
+            def tbMonthRate = (prices.TBMonth != null ? prices.TBMonth : costConfig.TBMonth ?: 0.0) as double
+            def defaultGpuMemGb = (costConfig.defaultGpuMemGb ?: 16) as double
+
+            def launchFile = costConfig.launchFile ?: null
             double headJobCost = 0.0
             if (launchFile) {
                 def parsed = parseLaunchScript(launchFile)
@@ -296,21 +312,6 @@ class TaskStatusReport extends BaseReport {
                         durationMs = java.time.Duration.between(start, complete).toMillis()
                     }
                     double hours = durationMs / (1000.0 * 60.0 * 60.0)
-
-                    // Read pricing to get rates
-                    def priceJsonPath = costConfig.priceJsonPath ?: null
-                    def priceAPI = costConfig.priceAPI ?: null
-                    def prices = [:]
-                    if (priceAPI) {
-                        try { prices = fetchPriceAPI(priceAPI) } catch (Exception e) {}
-                    } else if (priceJsonPath) {
-                        try { prices = parsePriceJson(priceJsonPath) } catch (Exception e) {}
-                    }
-
-                    def kCPUHr = (prices.kCPUHr != null ? prices.kCPUHr : costConfig.kCPUHr ?: 0.0) as double
-                    def kGBHr = (prices.kGBHr != null ? prices.kGBHr : costConfig.kGBHr ?: 0.0) as double
-                    def kGPUGBHr = (prices.kGPUGBHr != null ? prices.kGPUGBHr : costConfig.kGPUGBHr ?: 0.0) as double
-                    def defaultGpuMemGb = (costConfig.defaultGpuMemGb ?: 16) as double
 
                     def cpuRate = kCPUHr / 1000.0
                     def memGbRate = kGBHr / 1000.0
@@ -339,7 +340,14 @@ class TaskStatusReport extends BaseReport {
                     head_job_cost: "${symbol}${String.format('%.4f', headJobCost)}",
                     total_compute_cost: "${symbol}${String.format('%.4f', finalCompute)}",
                     projected_monthly_storage_cost: "${symbol}${String.format('%.4f', totalStorage)}",
-                    total_estimated_cost: "${symbol}${String.format('%.4f', finalCompute + totalStorage)}"
+                    total_estimated_cost: "${symbol}${String.format('%.4f', finalCompute + totalStorage)}",
+                    pricing_rates: [
+                        currency: prices.currency ?: costConfig.currency ?: 'EUR',
+                        kCPUHr: kCPUHr,
+                        kGBHr: kGBHr,
+                        kGPUGBHr: kGPUGBHr,
+                        TBMonth: tbMonthRate
+                    ]
                 ],
                 tasks_by_status: tasksByStatus
             ]
