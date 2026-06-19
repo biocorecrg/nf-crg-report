@@ -326,6 +326,44 @@ class TaskStatusReport extends BaseReport {
 
             double finalCompute = totalCompute + headJobCost
             def symbol = getCurrencySymbol()
+
+            def costByProcess = [:]
+            synchronized(tasks) {
+                tasks.each { task ->
+                    def proc = task.process_name ?: 'unknown'
+                    def rawCompute = (task.raw_compute_cost ?: 0.0) as double
+                    def rawStorage = (task.raw_storage_cost ?: 0.0) as double
+                    
+                    if (!costByProcess.containsKey(proc)) {
+                        costByProcess[proc] = [
+                            count: 0,
+                            compute_cost: 0.0,
+                            projected_monthly_storage_cost: 0.0,
+                            total_estimated_cost: 0.0
+                        ]
+                    }
+                    def entry = costByProcess[proc]
+                    entry.count += 1
+                    entry.compute_cost += rawCompute
+                    entry.projected_monthly_storage_cost += rawStorage
+                    entry.total_estimated_cost += (rawCompute + rawStorage)
+                }
+            }
+            
+            // Format costs with currency symbol
+            def formattedCostByProcess = [:]
+            costByProcess.each { proc, entry ->
+                formattedCostByProcess[proc] = [
+                    count: entry.count,
+                    compute_cost: "${symbol}${String.format('%.4f', entry.compute_cost)}",
+                    projected_monthly_storage_cost: "${symbol}${String.format('%.4f', entry.projected_monthly_storage_cost)}",
+                    total_estimated_cost: "${symbol}${String.format('%.4f', entry.total_estimated_cost)}",
+                    raw_compute_cost: entry.compute_cost,
+                    raw_storage_cost: entry.projected_monthly_storage_cost,
+                    raw_total_estimated_cost: entry.total_estimated_cost
+                ]
+            }
+
             map << [
                 summary: [
                     total_tasks: tasksByStatus.values().flatten().size(),
@@ -349,6 +387,7 @@ class TaskStatusReport extends BaseReport {
                         TBMonth: tbMonthRate
                     ]
                 ],
+                costs_by_process: formattedCostByProcess,
                 tasks_by_status: tasksByStatus
             ]
         }

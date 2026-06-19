@@ -73,6 +73,32 @@
         <% } %>
     </ul>
 
+    <% if (costs_by_process) { %>
+    <h2>Cost Summary by Process / Module</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Process / Module Name</th>
+                <th>Task Count</th>
+                <th>Compute Cost</th>
+                <th>Projected Monthly Storage Cost</th>
+                <th>Total Estimated Cost</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% costs_by_process.each { processName, costData -> %>
+            <tr>
+                <td><strong>${processName}</strong></td>
+                <td>${costData.count}</td>
+                <td>${costData.compute_cost}</td>
+                <td>${costData.projected_monthly_storage_cost}</td>
+                <td>${costData.total_estimated_cost}</td>
+            </tr>
+            <% } %>
+        </tbody>
+    </table>
+    <% } %>
+
     <h2>Tasks by Status</h2>
     <% tasks_by_status.each { status, tasks -> %>
         <h3>${status}</h3>
