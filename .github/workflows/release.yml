@@ -25,4 +25,4 @@ jobs:
       - name: Build and Release
         env:
           NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
-        run: ./gradlew releasePlugin
+        run: ./gradlew -Dorg.gradle.java.home="$JAVA_HOME" releasePlugin

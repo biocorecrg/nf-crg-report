@@ -552,4 +552,49 @@ class SampleStatusReportTest extends Specification {
         assert bravoIdx < charlieIdx
     }
 
+    def 'aborted task skips intermediate file write and is included on workflow complete'() {
+        given:
+        def tempDir = java.nio.file.Files.createTempDirectory('sample-status-abort-test').toFile()
+        def session = new Session()
+        session.config = [
+            nfreport: [
+                outputDir: tempDir.absolutePath,
+                sampleStatusReport: [
+                    enabled: true,
+                    suffix: '',
+                    format: ['json', 'html']
+                ]
+            ]
+        ]
+        def observer = new NfReportObserver()
+        observer.onFlowCreate(session)
+        def sampleStatusReport = getSampleStatusReport(observer)
+        def jsonFile = new File(tempDir, 'sample-status-report.json')
+        def htmlFile = new File(tempDir, 'sample-status-report.html')
+
+        def handler = createHandler('task1', 'sample1', 100, 1)
+        def record = createRecord(status: 'ABORTED')
+
+        when:
+        sampleStatusReport.onTaskComplete(handler, record)
+
+        then:
+        sampleStatusReport.toMap().samples_by_status.FAILED.size() == 1
+        !jsonFile.exists()
+        !htmlFile.exists()
+
+        when:
+        sampleStatusReport.onWorkflowComplete()
+
+        then:
+        jsonFile.exists()
+        htmlFile.exists()
+        def parsed = new groovy.json.JsonSlurper().parse(jsonFile)
+        parsed.summary.failed == 1
+        parsed.samples_by_status.FAILED[0].task_counts.aborted == 1
+
+        cleanup:
+        tempDir?.deleteDir()
+    }
+
 }

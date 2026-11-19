@@ -28,9 +28,16 @@ class SampleStatusReport extends BaseReport {
     private String sampleNameMetaKeyPattern = null
     private String extractSampleNameFrom = 'tag' // or "meta_map"
     private boolean printCompletionSummary = false
+    private groovy.text.Template cachedHtmlTemplate = null
+    private long lastWriteTimeMs = 0L
+    private static final long MIN_WRITE_INTERVAL_MS = 5000L
 
     SampleStatusReport() {
         super('sample-status-report')
+    }
+
+    private boolean isAborting(String status = null) {
+        return status == 'ABORTED' || session?.isAborted() || session?.isCancelled() || session?.isTerminated()
     }
 
     @Override
@@ -50,8 +57,8 @@ class SampleStatusReport extends BaseReport {
         }
 
         def sampleIds = extractSampleIds(handler, trace)
+        def status = trace.get('status')?.toString() ?: 'COMPLETED'
         if (sampleIds) {
-            def status = trace.get('status')?.toString() ?: 'COMPLETED'
             if (trace.get('error_action') == 'RETRY') {
                 status = 'RETRIED'
             } else if (trace.get('error_action') == 'IGNORE') {
@@ -61,7 +68,9 @@ class SampleStatusReport extends BaseReport {
                 updateSampleData(sampleId, handler, trace, status)
             }
         }
-        writeReport()
+        if (sampleIds && !isAborting(status)) {
+            writeReport(false)
+        }
     }
 
     @Override
@@ -76,7 +85,9 @@ class SampleStatusReport extends BaseReport {
             updateSampleData(sampleId, handler, trace, 'CACHED')
         }
 
-        writeReport()
+        if (sampleIds && !isAborting('CACHED')) {
+            writeReport(false)
+        }
     }
 
     @Override
@@ -86,7 +97,7 @@ class SampleStatusReport extends BaseReport {
             return
         }
 
-        writeReport()
+        writeReport(true)
 
         if (printCompletionSummary) {
             printSummary()
@@ -419,28 +430,36 @@ class SampleStatusReport extends BaseReport {
         return map
     }
 
-    private void writeHtmlReport() {
+    private synchronized groovy.text.Template getHtmlTemplate() {
+        if (cachedHtmlTemplate != null) {
+            return cachedHtmlTemplate
+        }
         def engine = new GStringTemplateEngine()
-        def template = null
-
         if (htmlTemplatePath) {
             def templateFile = new File(htmlTemplatePath)
             if (!templateFile.exists()) {
                 log.error("HTML template file not found at: ${htmlTemplatePath}")
-                return
+                return null
             }
-            template = engine.createTemplate(templateFile)
+            cachedHtmlTemplate = engine.createTemplate(templateFile)
         } else {
             def defaultTemplateStream = this.class.getResourceAsStream('/roche_csi/plugin/sample-status-report-template.html')
-            template = engine.createTemplate(new InputStreamReader(defaultTemplateStream))
+            cachedHtmlTemplate = engine.createTemplate(new InputStreamReader(defaultTemplateStream))
         }
+        return cachedHtmlTemplate
+    }
 
-        def htmlContent = template.make(toMap()).toString()
+    private void writeHtmlReport(Map reportData = toMap()) {
+        def template = getHtmlTemplate()
+        if (template == null) {
+            return
+        }
+        def htmlContent = template.make(reportData).toString()
         writeToFile(htmlContent, 'html')
     }
 
-    private void writeJsonReport() {
-        def json = new JsonBuilder(toMap())
+    private void writeJsonReport(Map reportData = toMap()) {
+        def json = new JsonBuilder(reportData)
         writeToFile(json.toPrettyString(), 'json')
     }
 
@@ -455,13 +474,20 @@ class SampleStatusReport extends BaseReport {
         writeToFile(tsvContent.toString(), 'tsv')
     }
 
-    private void writeReport() {
+    private void writeReport(boolean force = false) {
         synchronized(sampleData) {
+            long now = System.currentTimeMillis()
+            if (!force && lastWriteTimeMs > 0L && (now - lastWriteTimeMs) < MIN_WRITE_INTERVAL_MS) {
+                return
+            }
+            lastWriteTimeMs = now
+
+            def reportData = (format.contains('json') || format.contains('html')) ? toMap() : null
             if (format.contains('json')) {
-                writeJsonReport()
+                writeJsonReport(reportData)
             }
             if (format.contains('html')) {
-                writeHtmlReport()
+                writeHtmlReport(reportData)
             }
             if (format.contains('tsv')) {
                 writeTsvReport()

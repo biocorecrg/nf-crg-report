@@ -476,4 +476,153 @@ class TaskStatusReportTest extends Specification {
         assert result.tasks_by_status.FAILED.isEmpty()
     }
 
+    def 'aborted task skips intermediate file write and is included on workflow complete'() {
+        given:
+        def tempDir = java.nio.file.Files.createTempDirectory('task-status-abort-test').toFile()
+        def session = new Session()
+        session.config = [
+            nfreport: [
+                outputDir: tempDir.absolutePath,
+                taskStatusReport: [
+                    enabled: true,
+                    suffix: '',
+                    format: ['json', 'html']
+                ]
+            ]
+        ]
+        def observer = new NfReportObserver()
+        observer.onFlowCreate(session)
+        def taskStatusReport = getTaskStatusReport(observer)
+        def jsonFile = new File(tempDir, 'task-status-report.json')
+        def htmlFile = new File(tempDir, 'task-status-report.html')
+
+        def handler = createHandler('task1', 'sample1')
+        def record = new TraceRecord()
+        record.status = 'ABORTED'
+
+        when:
+        taskStatusReport.onTaskComplete(handler, record)
+
+        then:
+        taskStatusReport.toMap().summary.aborted == 1
+        !jsonFile.exists()
+        !htmlFile.exists()
+
+        when:
+        taskStatusReport.onWorkflowComplete()
+
+        then:
+        jsonFile.exists()
+        htmlFile.exists()
+        def parsed = new groovy.json.JsonSlurper().parse(jsonFile)
+        parsed.summary.aborted == 1
+        parsed.tasks_by_status.ABORTED.size() == 1
+
+        cleanup:
+        tempDir?.deleteDir()
+    }
+
+    def 'session abort skips intermediate file writes even for non-aborted tasks until workflow complete'() {
+        given:
+        def tempDir = java.nio.file.Files.createTempDirectory('task-status-session-abort-test').toFile()
+        def session = new Session()
+        session.config = [
+            nfreport: [
+                outputDir: tempDir.absolutePath,
+                taskStatusReport: [
+                    enabled: true,
+                    suffix: '',
+                    format: ['json']
+                ]
+            ]
+        ]
+        def observer = new NfReportObserver()
+        observer.onFlowCreate(session)
+        def taskStatusReport = getTaskStatusReport(observer)
+        def jsonFile = new File(tempDir, 'task-status-report.json')
+
+        session.abort()
+        def handler = createHandler('task1', 'sample1')
+        def record = new TraceRecord()
+        record.status = 'COMPLETED'
+
+        when:
+        taskStatusReport.onTaskComplete(handler, record)
+
+        then:
+        taskStatusReport.toMap().summary.completed == 1
+        !jsonFile.exists()
+
+        when:
+        taskStatusReport.onWorkflowComplete()
+
+        then:
+        jsonFile.exists()
+        def parsed = new groovy.json.JsonSlurper().parse(jsonFile)
+        parsed.summary.completed == 1
+
+        cleanup:
+        tempDir?.deleteDir()
+    }
+
+    def 'pricing JSON is loaded and cached once across multiple task and toMap calls'() {
+        given:
+        def tempDir = java.nio.file.Files.createTempDirectory('task-status-price-cache-test').toFile()
+        def priceFile = new File(tempDir, 'prices.json')
+        priceFile.text = '{"currency": "USD", "kCPUHr": 10.0, "kGBHr": 2.0, "kGPUGBHr": 20.0, "TBMonth": 5.0}'
+
+        def session = new Session()
+        session.config = [
+            nfreport: [
+                outputDir: tempDir.absolutePath,
+                costs: [
+                    priceJsonPath: priceFile.absolutePath
+                ],
+                taskStatusReport: [
+                    enabled: true,
+                    suffix: '',
+                    format: ['json']
+                ]
+            ]
+        ]
+        def observer = new NfReportObserver()
+        observer.onFlowCreate(session)
+        def taskStatusReport = getTaskStatusReport(observer)
+
+        def h1 = createHandler('task1', 'sample1', 100)
+        def r1 = new TraceRecord()
+        r1.status = 'COMPLETED'
+        r1.cpus = 2
+        r1.realtime = 3600000L
+
+        when:
+        taskStatusReport.onTaskComplete(h1, r1)
+        // Overwrite and delete priceFile after first load to ensure subsequent calls use cached rates
+        priceFile.text = '{"currency": "EUR", "kCPUHr": 999.0, "kGBHr": 999.0, "kGPUGBHr": 999.0, "TBMonth": 999.0}'
+        priceFile.delete()
+
+        def h2 = createHandler('task2', 'sample1', 101)
+        def r2 = new TraceRecord()
+        r2.status = 'COMPLETED'
+        r2.cpus = 2
+        r2.realtime = 3600000L
+        taskStatusReport.onTaskComplete(h2, r2)
+
+        def h3 = createHandler('task3', 'sample1', 102)
+        def r3 = new TraceRecord()
+        r3.status = 'CACHED'
+        taskStatusReport.onTaskCached(h3, r3)
+
+        def result = taskStatusReport.toMap()
+
+        then:
+        result.summary.pricing_rates.currency == 'USD'
+        result.summary.pricing_rates.kCPUHr == 10.0d
+        result.summary.tasks_compute_cost.startsWith('$')
+        result.summary.total_tasks == 3
+
+        cleanup:
+        tempDir?.deleteDir()
+    }
+
 }

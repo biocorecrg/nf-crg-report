@@ -33,9 +33,20 @@ class TaskStatusReport extends BaseReport {
     private List<Map> tasks = []
     private boolean hasLoggedPricingWarning = false
     private boolean hasLoggedPricingRates = false
+    private Map cachedPrices = null
+    private boolean pricesLoaded = false
+    private Map cachedLaunchResources = null
+    private boolean launchResourcesLoaded = false
+    private groovy.text.Template cachedHtmlTemplate = null
+    private long lastWriteTimeMs = 0L
+    private static final long MIN_WRITE_INTERVAL_MS = 5000L
 
     TaskStatusReport() {
         super('task-status-report')
+    }
+
+    private boolean isAborting(String status = null) {
+        return status == 'ABORTED' || session?.isAborted() || session?.isCancelled() || session?.isTerminated()
     }
 
     @Override
@@ -59,7 +70,9 @@ class TaskStatusReport extends BaseReport {
         def taskData = createTaskData(handler, trace, status).findAll { k, v -> fields.isEmpty() || fields.contains(k) }
         recordTask(status, taskData)
 
-        writeReport()
+        if (!isAborting(status)) {
+            writeReport(false)
+        }
     }
 
     @Override
@@ -72,7 +85,9 @@ class TaskStatusReport extends BaseReport {
         def taskData = createTaskData(handler, trace, 'CACHED')
         recordTask('CACHED', taskData)
 
-        writeReport()
+        if (!isAborting('CACHED')) {
+            writeReport(false)
+        }
     }
 
     @Override
@@ -82,7 +97,7 @@ class TaskStatusReport extends BaseReport {
             return
         }
 
-        writeReport()
+        writeReport(true)
     }
 
     List<String> getOutputs(TaskHandler handler) {
@@ -100,8 +115,11 @@ class TaskStatusReport extends BaseReport {
         return outputs
     }
 
-    private Map createTaskData(TaskHandler handler, TraceRecord trace, String status) {
-        def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
+    private synchronized Map loadPrices(Map costConfig) {
+        if (pricesLoaded) {
+            return cachedPrices
+        }
+
         def priceJsonPath = costConfig.priceJsonPath ?: null
         def priceAPI = costConfig.priceAPI ?: null
 
@@ -110,19 +128,15 @@ class TaskStatusReport extends BaseReport {
             try {
                 prices = fetchPriceAPI(priceAPI)
                 if (prices == null || prices.isEmpty()) {
-                    synchronized(this) {
-                        if (!hasLoggedPricingWarning) {
-                            log.warn("Pricing API at ${priceAPI} returned an empty response. Cost estimation will default to configured/default rates.")
-                            hasLoggedPricingWarning = true
-                        }
+                    if (!hasLoggedPricingWarning) {
+                        log.warn("Pricing API at ${priceAPI} returned an empty response. Cost estimation will default to configured/default rates.")
+                        hasLoggedPricingWarning = true
                     }
                 }
             } catch (Exception e) {
-                synchronized(this) {
-                    if (!hasLoggedPricingWarning) {
-                        log.warn("Pricing API at ${priceAPI} is not working or does not exist: ${e.message}. Cost estimation will default to configured/default rates.")
-                        hasLoggedPricingWarning = true
-                    }
+                if (!hasLoggedPricingWarning) {
+                    log.warn("Pricing API at ${priceAPI} is not working or does not exist: ${e.message}. Cost estimation will default to configured/default rates.")
+                    hasLoggedPricingWarning = true
                 }
             }
         } else if (priceJsonPath) {
@@ -131,37 +145,47 @@ class TaskStatusReport extends BaseReport {
                 if (file.exists()) {
                     prices = parsePriceJson(priceJsonPath)
                     if (prices == null || prices.isEmpty()) {
-                        synchronized(this) {
-                            if (!hasLoggedPricingWarning) {
-                                log.warn("Pricing JSON at ${priceJsonPath} is empty. Cost estimation will default to configured/default rates.")
-                                hasLoggedPricingWarning = true
-                            }
-                        }
-                    }
-                } else {
-                    synchronized(this) {
                         if (!hasLoggedPricingWarning) {
-                            log.warn("Pricing JSON file not found at: ${priceJsonPath}. Cost estimation will default to 0.0.")
+                            log.warn("Pricing JSON at ${priceJsonPath} is empty. Cost estimation will default to configured/default rates.")
                             hasLoggedPricingWarning = true
                         }
                     }
-                }
-            } catch (Exception e) {
-                synchronized(this) {
+                } else {
                     if (!hasLoggedPricingWarning) {
-                        log.warn("Failed to parse pricing JSON: ${e.message}")
+                        log.warn("Pricing JSON file not found at: ${priceJsonPath}. Cost estimation will default to 0.0.")
                         hasLoggedPricingWarning = true
                     }
                 }
-            }
-        } else {
-            synchronized(this) {
+            } catch (Exception e) {
                 if (!hasLoggedPricingWarning) {
-                    log.info("No pricing API or JSON path configured. Cost estimation will default to 0.0.")
+                    log.warn("Failed to parse pricing JSON: ${e.message}")
                     hasLoggedPricingWarning = true
                 }
             }
+        } else {
+            if (!hasLoggedPricingWarning) {
+                log.info("No pricing API or JSON path configured. Cost estimation will default to 0.0.")
+                hasLoggedPricingWarning = true
+            }
         }
+
+        cachedPrices = prices ?: [:]
+        pricesLoaded = true
+        return cachedPrices
+    }
+
+    private synchronized Map loadLaunchResources(String launchFile) {
+        if (launchResourcesLoaded) {
+            return cachedLaunchResources
+        }
+        cachedLaunchResources = parseLaunchScript(launchFile)
+        launchResourcesLoaded = true
+        return cachedLaunchResources
+    }
+
+    private Map createTaskData(TaskHandler handler, TraceRecord trace, String status) {
+        def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
+        def prices = loadPrices(costConfig)
 
         def kCPUHr = (prices.kCPUHr != null ? prices.kCPUHr : costConfig.kCPUHr ?: 0.0) as double
         def kGBHr = (prices.kGBHr != null ? prices.kGBHr : costConfig.kGBHr ?: 0.0) as double
@@ -196,14 +220,16 @@ class TaskStatusReport extends BaseReport {
 
         def outputPaths = getOutputs(handler)
         long totalOutputSizeBytes = 0
-        outputPaths.each { pathStr ->
-            try {
-                def path = java.nio.file.Paths.get(pathStr)
-                if (java.nio.file.Files.exists(path) && java.nio.file.Files.isRegularFile(path)) {
-                    totalOutputSizeBytes += java.nio.file.Files.size(path)
+        if (status != 'ABORTED') {
+            outputPaths.each { pathStr ->
+                try {
+                    def path = java.nio.file.Paths.get(pathStr)
+                    if (java.nio.file.Files.exists(path) && java.nio.file.Files.isRegularFile(path)) {
+                        totalOutputSizeBytes += java.nio.file.Files.size(path)
+                    }
+                } catch (Exception e) {
+                    // Ignore paths that cannot be accessed or resolved
                 }
-            } catch (Exception e) {
-                // Ignore paths that cannot be accessed or resolved
             }
         }
         def outputTb = totalOutputSizeBytes / (1024.0 * 1024.0 * 1024.0 * 1024.0)
@@ -254,7 +280,7 @@ class TaskStatusReport extends BaseReport {
             err: trace.get('workdir') ? "${trace.get('workdir')}/.command.err" : null,
             scratch: trace.get('scratch')?.toString(),
             container: trace.get('container')?.toString(),
-            outputs: getOutputs(handler)
+            outputs: outputPaths
         ]
     }
 
@@ -282,16 +308,7 @@ class TaskStatusReport extends BaseReport {
                 }
             }
             def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
-
-            // Read pricing to get rates
-            def priceJsonPath = costConfig.priceJsonPath ?: null
-            def priceAPI = costConfig.priceAPI ?: null
-            def prices = [:]
-            if (priceAPI) {
-                try { prices = fetchPriceAPI(priceAPI) } catch (Exception e) {}
-            } else if (priceJsonPath) {
-                try { prices = parsePriceJson(priceJsonPath) } catch (Exception e) {}
-            }
+            def prices = loadPrices(costConfig)
 
             def kCPUHr = (prices.kCPUHr != null ? prices.kCPUHr : costConfig.kCPUHr ?: 0.0) as double
             def kGBHr = (prices.kGBHr != null ? prices.kGBHr : costConfig.kGBHr ?: 0.0) as double
@@ -302,7 +319,7 @@ class TaskStatusReport extends BaseReport {
             def launchFile = costConfig.launchFile ?: null
             double headJobCost = 0.0
             if (launchFile) {
-                def parsed = parseLaunchScript(launchFile)
+                def parsed = loadLaunchResources(launchFile)
                 if (parsed.cpus > 0 || parsed.memoryGb > 0.0 || parsed.gpus > 0) {
                     def workflowInfo = session.workflowMetadata
                     long durationMs = 0
@@ -394,26 +411,36 @@ class TaskStatusReport extends BaseReport {
         return map
     }
 
-    private void writeJsonReport() {
-        def json = new JsonBuilder(toMap())
-        writeToFile(json.toPrettyString(), 'json')
-    }
-
-    private void writeHtmlReport() {
+    private synchronized groovy.text.Template getHtmlTemplate() {
+        if (cachedHtmlTemplate != null) {
+            return cachedHtmlTemplate
+        }
         def engine = new GStringTemplateEngine()
-        def template = null
         if (htmlTemplatePath) {
             def templateFile = new File(htmlTemplatePath)
             if (!templateFile.exists()) {
                 log.error("HTML template file not found at: ${htmlTemplatePath}")
-                return
+                return null
             }
-            template = engine.createTemplate(templateFile)
+            cachedHtmlTemplate = engine.createTemplate(templateFile)
         } else {
             def defaultTemplateStream = this.class.getResourceAsStream('/roche_csi/plugin/task-status-report-template.html')
-            template = engine.createTemplate(new InputStreamReader(defaultTemplateStream))
+            cachedHtmlTemplate = engine.createTemplate(new InputStreamReader(defaultTemplateStream))
         }
-        def htmlContent = template.make(toMap()).toString()
+        return cachedHtmlTemplate
+    }
+
+    private void writeJsonReport(Map reportData = toMap()) {
+        def json = new JsonBuilder(reportData)
+        writeToFile(json.toPrettyString(), 'json')
+    }
+
+    private void writeHtmlReport(Map reportData = toMap()) {
+        def template = getHtmlTemplate()
+        if (template == null) {
+            return
+        }
+        def htmlContent = template.make(reportData).toString()
         writeToFile(htmlContent, 'html')
     }
 
@@ -429,13 +456,20 @@ class TaskStatusReport extends BaseReport {
         writeToFile(tsvContent.toString(), 'tsv')
     }
 
-    private void writeReport() {
+    private void writeReport(boolean force = false) {
         synchronized(tasksByStatus) {
+            long now = System.currentTimeMillis()
+            if (!force && lastWriteTimeMs > 0L && (now - lastWriteTimeMs) < MIN_WRITE_INTERVAL_MS) {
+                return
+            }
+            lastWriteTimeMs = now
+
+            def reportData = (format.contains('json') || format.contains('html')) ? toMap() : null
             if (format.contains('json')) {
-                writeJsonReport()
+                writeJsonReport(reportData)
             }
             if (format.contains('html')) {
-                writeHtmlReport()
+                writeHtmlReport(reportData)
             }
             if (format.contains('tsv')) {
                 writeTsvReport()
@@ -446,23 +480,7 @@ class TaskStatusReport extends BaseReport {
     String getCurrencySymbol() {
         def costConfig = session.config.navigate('nfreport.costs') as Map ?: [:]
         def currency = costConfig.currency ?: 'EUR'
-
-        def priceAPI = costConfig.priceAPI ?: null
-        def priceJsonPath = costConfig.priceJsonPath ?: null
-        def prices = [:]
-        if (priceAPI) {
-            try {
-                prices = fetchPriceAPI(priceAPI)
-            } catch (Exception e) {
-                // ignore
-            }
-        } else if (priceJsonPath) {
-            try {
-                prices = parsePriceJson(priceJsonPath)
-            } catch (Exception e) {
-                // ignore
-            }
-        }
+        def prices = loadPrices(costConfig)
 
         if (prices?.currency) {
             currency = prices.currency
